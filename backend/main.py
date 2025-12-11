@@ -1,0 +1,62 @@
+# backend/main.py
+from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+
+from firebase_admin import auth as firebase_auth
+from firebase_client import db  # pastikan file firebase_client.py sudah ada
+
+app = FastAPI()
+
+# CORS supaya frontend (5173) bisa akses backend (8000)
+origins = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+security = HTTPBearer()
+
+
+def get_current_user(
+    creds: HTTPAuthorizationCredentials = Depends(security),
+):
+    token = creds.credentials
+    try:
+        decoded = firebase_auth.verify_id_token(token)
+        # decoded berisi uid, email, dsb
+        return decoded
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired token",
+        )
+
+
+@app.get("/health")
+def health_check():
+    # buat test apakah backend hidup
+    return {"status": "ok"}
+
+
+@app.get("/users/me")
+def get_me(current_user=Depends(get_current_user)):
+    uid = current_user["uid"]
+    doc = db.collection("users").document(uid).get()
+    if not doc.exists:
+        raise HTTPException(status_code=404, detail="User profile not found")
+
+    data = doc.to_dict()
+    return {
+        "uid": uid,
+        "email": current_user.get("email"),
+        "name": data.get("name"),
+        "role": data.get("role"),
+    }
