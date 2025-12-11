@@ -93,12 +93,17 @@ def list_my_bookings(current_user=Depends(get_current_user)):
     uid = current_user["uid"]
     ensure_role(uid, ("user",))
 
-    query = (
-        db.collection("bookings")
-        .where("user_id", "==", uid)
-        .order_by("created_at", direction=firestore.Query.DESCENDING)
-    )
-    return [serialize_booking(doc) for doc in query.stream()]
+    query = db.collection("bookings").where("user_id", "==", uid)
+    snapshots = list(query.stream())
+
+    def created_at_value(doc):
+        value = doc.to_dict().get("created_at")
+        if isinstance(value, datetime):
+            return value
+        return datetime.min
+
+    sorted_docs = sorted(snapshots, key=created_at_value, reverse=True)
+    return [serialize_booking(doc) for doc in sorted_docs]
 
 
 @router.get("/pending", response_model=list[BookingResponse])
@@ -106,12 +111,17 @@ def list_pending_bookings(current_user=Depends(get_current_user)):
     uid = current_user["uid"]
     ensure_role(uid, ("office_coordinator", "superadmin"))
 
-    query = (
-        db.collection("bookings")
-        .where("status", "==", "pending")
-        .order_by("created_at", direction=firestore.Query.DESCENDING)
-    )
-    return [serialize_booking(doc) for doc in query.stream()]
+    query = db.collection("bookings").where("status", "==", "pending")
+    snapshots = list(query.stream())
+
+    def created_at_value(doc):
+        value = doc.to_dict().get("created_at")
+        if isinstance(value, datetime):
+            return value
+        return datetime.min
+
+    sorted_docs = sorted(snapshots, key=created_at_value, reverse=True)
+    return [serialize_booking(doc) for doc in sorted_docs]
 
 
 @router.patch("/{booking_id}/status", response_model=BookingResponse)
@@ -147,4 +157,3 @@ def list_assigned_bookings(current_user=Depends(get_current_user)):
 
     query = db.collection("bookings").where("driver_id", "==", uid)
     return [serialize_booking(doc) for doc in query.stream()]
-
