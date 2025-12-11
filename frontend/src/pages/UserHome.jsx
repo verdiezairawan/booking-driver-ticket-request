@@ -1,11 +1,45 @@
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import MainLayout from '../components/MainLayout'
 
 function UserHome() {
   const navigate = useNavigate()
+  const [profile, setProfile] = useState({ name: '' })
+  const [loadingProfile, setLoadingProfile] = useState(true)
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      const token = localStorage.getItem('authToken')
+      if (!token) {
+        setLoadingProfile(false)
+        return
+      }
+      try {
+        const response = await fetch('http://localhost:8000/users/me', {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        })
+        if (response.ok) {
+          const data = await response.json()
+          setProfile({ name: data.name || data.email || '' })
+        }
+      } catch (error) {
+        console.error('Failed to load profile', error)
+      } finally {
+        setLoadingProfile(false)
+      }
+    }
+
+    fetchProfile()
+  }, [])
 
   const handleTicketRequest = () => {
     navigate('/user/ticket-request')
+  }
+
+  const handleTicketHistory = () => {
+    navigate('/user/ticket-history')
   }
 
   return (
@@ -13,7 +47,7 @@ function UserHome() {
       <div className="user-dashboard">
         <div className="dashboard-header">
           <div>
-            <h1>Halo, Nabilah</h1>
+            <h1>Halo, {profile.name || (loadingProfile ? '...' : 'User')}</h1>
             <p className="muted">Ringkasan perjalanan dan booking kamu</p>
           </div>
         </div>
@@ -85,7 +119,7 @@ function UserHome() {
               <div className="action-content">
                 <h3>Ticket History</h3>
                 <p className="muted">Lihat semua permintaan tiket kamu</p>
-                <button className="link-cta" type="button">
+                <button className="link-cta" type="button" onClick={handleTicketHistory}>
                   View →
                 </button>
               </div>

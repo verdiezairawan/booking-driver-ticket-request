@@ -382,6 +382,7 @@
   font-weight: 600;
   cursor: pointer;
   padding: 0;
+  font-size: 14px;
 }
 
 .ticket-form {
@@ -491,6 +492,74 @@
 .btn-neutral {
   background-color: #cbd5e1;
   color: #0f172a;
+}
+
+.success-text {
+  margin: 0;
+  color: #15803d;
+  font-size: 14px;
+}
+
+.table-wrapper {
+  overflow-x: auto;
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06);
+}
+
+.simple-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 1000px;
+}
+
+.simple-table th,
+.simple-table td {
+  padding: 12px 14px;
+  border-bottom: 1px solid #e2e8f0;
+  text-align: left;
+}
+
+.simple-table th {
+  background-color: #f8fafc;
+  color: #0f172a;
+  font-weight: 700;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: 13px;
+  text-transform: capitalize;
+}
+
+.status-pending {
+  background-color: #fef3c7;
+  color: #b45309;
+}
+
+.status-approved {
+  background-color: #dcfce7;
+  color: #15803d;
+}
+
+.status-rejected {
+  background-color: #fee2e2;
+  color: #b91c1c;
+}
+
+.status-completed {
+  background-color: #e0f2fe;
+  color: #0369a1;
+}
+
+.cell-wrap {
+  max-width: 220px;
+  word-break: break-word;
+  white-space: normal;
 }
 
 @media (max-width: 768px) {

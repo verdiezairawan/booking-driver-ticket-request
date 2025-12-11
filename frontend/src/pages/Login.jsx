@@ -36,7 +36,16 @@ function Login() {
       })
 
       if (!response.ok) {
-        throw new Error('Failed to fetch user role')
+        let detail = 'Failed to fetch user role'
+        try {
+          const data = await response.json()
+          if (data?.detail) {
+            detail = data.detail
+          }
+        } catch (e) {
+          // ignore parse error
+        }
+        throw new Error(detail)
       }
 
       const data = await response.json()
@@ -46,19 +55,10 @@ function Login() {
     } catch (err) {
       console.error('Login error', err)
       localStorage.removeItem('authToken')
-      setError('Login failed. Please check your email and password.')
+      setError(err?.message || 'Login failed. Please check your email and password.')
     } finally {
       setLoading(false)
     }
-    signInWithEmailAndPassword(auth, email, password)
-    .then(async (cred) => {
-      console.log("LOGIN OK", cred.user.uid);
-      const token = await cred.user.getIdToken();
-      // ... lanjut fetch /users/me
-    })
-    .catch((err) => {
-      console.error("LOGIN ERROR", err.code, err.message);
-    });
   }
 
   return (

@@ -37,6 +37,10 @@ def get_current_user(
         )
 
 
+from routes_bookings import router as bookings_router
+from routes_tickets import router as tickets_router
+
+
 @app.get("/health")
 def health_check():
     return {"status": "ok"}
@@ -56,3 +60,7 @@ def get_me(current_user=Depends(get_current_user)):
         "name": data.get("name"),
         "role": data.get("role"),
     }
+
+
+app.include_router(bookings_router)
+app.include_router(tickets_router)
