@@ -4,6 +4,7 @@ import UserHome from './pages/UserHome'
 import DriverHome from './pages/DriverHome'
 import OfficeHome from './pages/OfficeHome'
 import AdminHome from './pages/AdminHome'
+import TicketRequest from './pages/TicketRequest'
 import ProtectedRoute from './components/ProtectedRoute'
 import './App.css'
 
@@ -18,6 +19,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <UserHome />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/user/ticket-request"
+            element={
+              <ProtectedRoute>
+                <TicketRequest />
               </ProtectedRoute>
             }
           />
