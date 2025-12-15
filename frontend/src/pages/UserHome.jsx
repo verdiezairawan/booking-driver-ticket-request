@@ -79,14 +79,22 @@ function UserHome() {
     navigate('/user/ticket-history')
   }
 
+  const handleBookingDriver = () => {
+    navigate('/user/booking-driver')
+  }
+
+  const handleBookingHistory = () => {
+    navigate('/user/booking-history')
+  }
+
   return (
-    <MainLayout title="Dashboard User">
+    <MainLayout title="User Dashboard">
       <div className="user-dashboard">
         <div className="dashboard-header">
           <div>
-            <p className="eyebrow">Dashboard User</p>
-            <h1>Halo, {profile.name || (loadingProfile ? '...' : 'User')}</h1>
-            <p className="muted">Ringkasan perjalanan dan booking kamu</p>
+            <p className="eyebrow">User Dashboard</p>
+            <h1>Hello, {profile.name || (loadingProfile ? '...' : 'User')}</h1>
+            <p className="muted">Summary of your trips and bookings</p>
           </div>
         </div>
 
@@ -95,21 +103,21 @@ function UserHome() {
             <article className="stat-card">
               <div className="stat-icon stat-icon-blue">T</div>
               <div>
-                <p className="stat-label">Ticket Pending</p>
+                <p className="stat-label">Pending Tickets</p>
                 <p className="stat-value">{stats.ticketPending}</p>
               </div>
             </article>
             <article className="stat-card">
               <div className="stat-icon stat-icon-green">D</div>
               <div>
-                <p className="stat-label">Driver Pending</p>
+                <p className="stat-label">Pending Bookings</p>
                 <p className="stat-value">{stats.bookingPending}</p>
               </div>
             </article>
             <article className="stat-card">
               <div className="stat-icon stat-icon-amber">B</div>
               <div>
-                <p className="stat-label">Booking Active</p>
+                <p className="stat-label">Active Bookings</p>
                 <p className="stat-value">{stats.bookingActive}</p>
               </div>
             </article>
@@ -120,8 +128,8 @@ function UserHome() {
           <div className="section-heading">
             <div className="heading-icon">#</div>
             <div>
-              <h2>Main menu</h2>
-              <p className="muted">Pilih layanan yang kamu butuhkan</p>
+              <h2>Main Menu</h2>
+              <p className="muted">Choose the service you need</p>
             </div>
           </div>
 
@@ -130,9 +138,7 @@ function UserHome() {
               <div className="action-icon">+</div>
               <div className="action-content">
                 <h3>Make a Ticket Request</h3>
-                <p className="muted">
-                  Ajukan permintaan untuk perjalanan dinas atau kebutuhan lainnya
-                </p>
+                <p className="muted">Submit a ticket request for business or travel needs</p>
                 <button className="link-cta" type="button" onClick={handleTicketRequest}>
                   Make Request →
                 </button>
@@ -142,11 +148,9 @@ function UserHome() {
             <article className="action-card action-success">
               <div className="action-icon">+</div>
               <div className="action-content">
-                <h3>Make a Booking Driver</h3>
-                <p className="muted">
-                  Pesan driver untuk keperluan perjalanan dinas atau operasional
-                </p>
-                <button className="link-cta success" type="button">
+                <h3>Book a Driver</h3>
+                <p className="muted">Request a driver for business travel or operational needs</p>
+                <button className="link-cta success" type="button" onClick={handleBookingDriver}>
                   Make Request →
                 </button>
               </div>
@@ -156,7 +160,7 @@ function UserHome() {
               <div className="action-icon icon-soft">T</div>
               <div className="action-content">
                 <h3>Ticket History</h3>
-                <p className="muted">Lihat semua permintaan tiket kamu</p>
+                <p className="muted">View all your ticket requests</p>
                 <button className="link-cta" type="button" onClick={handleTicketHistory}>
                   View →
                 </button>
@@ -167,8 +171,8 @@ function UserHome() {
               <div className="action-icon icon-soft">D</div>
               <div className="action-content">
                 <h3>Driver History</h3>
-                <p className="muted">Lihat semua riwayat booking driver</p>
-                <button className="link-cta" type="button">
+                <p className="muted">View all your driver bookings</p>
+                <button className="link-cta" type="button" onClick={handleBookingHistory}>
                   View →
                 </button>
               </div>

@@ -21,8 +21,7 @@ function MainLayout({ title, children }) {
     <div className="layout">
       <header className="navbar">
         <div className="navbar__brand">
-          <span className="navbar__title">Booking Driver</span>
-          {title ? <span className="navbar__subtitle">{title}</span> : null}
+          <span className="navbar__title">App Name</span>
         </div>
         <button type="button" className="logout-button" onClick={handleLogout}>
           Logout

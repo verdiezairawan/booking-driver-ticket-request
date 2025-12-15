@@ -63,34 +63,42 @@ function Login() {
 
   return (
     <div className="login-page">
-      <div className="login-card">
-        <h1 className="login-title">Masuk</h1>
-        <form className="login-form" onSubmit={handleSubmit}>
-          <label className="form-field">
-            <span>Email</span>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              placeholder="you@example.com"
-            />
-          </label>
-          <label className="form-field">
-            <span>Password</span>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              placeholder="••••••••"
-            />
-          </label>
-          {error ? <p className="error-text">{error}</p> : null}
-          <button type="submit" disabled={loading}>
-            {loading ? 'Signing in...' : 'Login'}
-          </button>
-        </form>
+      <div className="login-wrapper">
+        <div className="login-logo">
+          <div className="login-logo__circle">
+            <span>APP LOGO</span>
+          </div>
+        </div>
+
+        <div className="login-card login-card-branded">
+          <h1 className="login-title">LOGIN</h1>
+          <form className="login-form" onSubmit={handleSubmit}>
+            <label className="form-field">
+              <span>Email</span>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                placeholder="you@example.com"
+              />
+            </label>
+            <label className="form-field">
+              <span>Password</span>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                placeholder="********"
+              />
+            </label>
+            {error ? <p className="error-text">{error}</p> : null}
+            <button type="submit" disabled={loading}>
+              {loading ? 'Signing in...' : 'Login'}
+            </button>
+          </form>
+        </div>
       </div>
     </div>
   )

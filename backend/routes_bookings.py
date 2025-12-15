@@ -157,3 +157,20 @@ def list_assigned_bookings(current_user=Depends(get_current_user)):
 
     query = db.collection("bookings").where("driver_id", "==", uid)
     return [serialize_booking(doc) for doc in query.stream()]
+
+
+@router.get("/stats")
+def booking_stats(current_user=Depends(get_current_user)):
+    uid = current_user["uid"]
+    ensure_role(uid, ("office_coordinator", "superadmin"))
+
+    def count_status(status_value: str) -> int:
+        query = db.collection("bookings").where("status", "==", status_value).stream()
+        return len(list(query))
+
+    return {
+        "pending": count_status("pending"),
+        "approved": count_status("approved"),
+        "rejected": count_status("rejected"),
+        "completed": count_status("completed"),
+    }

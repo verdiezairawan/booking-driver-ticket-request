@@ -75,6 +75,15 @@ def ensure_user_role(uid: str):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
 
 
+def ensure_role(uid: str, allowed: tuple[str, ...]):
+    doc = db.collection("users").document(uid).get()
+    if not doc.exists:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User profile not found")
+    role = doc.to_dict().get("role")
+    if role not in allowed:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
+
+
 @router.post("", response_model=TicketResponse)
 def create_ticket(payload: TicketCreate, current_user=Depends(get_current_user)):
     uid = current_user["uid"]
@@ -116,3 +125,31 @@ def list_my_tickets(current_user=Depends(get_current_user)):
     snapshots_sorted = sorted(snapshots, key=created_at_value, reverse=True)
     tickets = [serialize_ticket(doc) for doc in snapshots_sorted]
     return tickets
+
+
+@router.get("/stats")
+def ticket_stats(current_user=Depends(get_current_user)):
+    uid = current_user["uid"]
+    ensure_role(uid, ("office_coordinator", "superadmin"))
+
+    pending = (
+        db.collection("tickets")
+        .where("status", "==", "pending")
+        .stream()
+    )
+    approved = (
+        db.collection("tickets")
+        .where("status", "==", "approved")
+        .stream()
+    )
+    rejected = (
+        db.collection("tickets")
+        .where("status", "==", "rejected")
+        .stream()
+    )
+
+    return {
+        "pending": len(list(pending)),
+        "approved": len(list(approved)),
+        "rejected": len(list(rejected)),
+    }
