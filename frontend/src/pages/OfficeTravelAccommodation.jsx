@@ -50,6 +50,7 @@ function OfficeTravelAccommodation() {
     if (item === 'Driver History') navigate('/office/driver-history')
     if (item === 'Travel Accommodation') navigate('/office/travel-accommodation')
     if (item === 'Assign Drivers') navigate('/office/assign-drivers')
+    if (item === 'Manage User') navigate('/office/manage-user')
   }
 
   const handleChange = (field) => (event) => {

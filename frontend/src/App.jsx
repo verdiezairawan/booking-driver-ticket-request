@@ -14,6 +14,7 @@ import OfficeTicketHistory from './pages/OfficeTicketHistory'
 import OfficeDriverHistory from './pages/OfficeDriverHistory'
 import OfficeTravelAccommodation from './pages/OfficeTravelAccommodation'
 import OfficeAssignDrivers from './pages/OfficeAssignDrivers'
+import OfficeManageUser from './pages/OfficeManageUser'
 import ProtectedRoute from './components/ProtectedRoute'
 import './App.css'
 
@@ -124,6 +125,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <OfficeAssignDrivers />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/office/manage-user"
+            element={
+              <ProtectedRoute>
+                <OfficeManageUser />
               </ProtectedRoute>
             }
           />
