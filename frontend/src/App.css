@@ -546,9 +546,24 @@
 
 .radio-row {
   display: flex;
-  gap: 12px;
-  align-items: center;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-start;
   font-size: 14px;
+  color: #475569;
+}
+
+.radio-options {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.radio-options label {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
 }
 
 .file-field {
@@ -571,6 +586,11 @@
   padding: 12px 16px;
   cursor: pointer;
   font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  gap: 8px;
 }
 
 .btn-primary {
@@ -583,10 +603,135 @@
   color: #0f172a;
 }
 
+.btn-disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
 .success-text {
   margin: 0;
   color: #15803d;
   font-size: 14px;
+}
+
+/* Driver tasks */
+.driver-page {
+  max-width: 1100px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.driver-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.driver-header h1 {
+  margin: 4px 0;
+  color: var(--brand-bold);
+}
+
+.driver-tabs {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.driver-tab {
+  border: 1px solid #e2e8f0;
+  background-color: #ffffff;
+  color: #0f172a;
+  padding: 10px 14px;
+  border-radius: 999px;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.driver-tab.active {
+  border-color: var(--brand-bold);
+  color: var(--brand-bold);
+  background-color: #f5e6f2;
+}
+
+.driver-empty {
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 18px;
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.05);
+}
+
+.driver-empty h2 {
+  margin: 0 0 6px 0;
+  color: var(--brand-bold);
+}
+
+.driver-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.driver-card {
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 16px;
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.driver-route {
+  margin: 0;
+  font-size: 18px;
+  color: var(--brand-bold);
+}
+
+.driver-subrow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+.driver-meta {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px;
+}
+
+.driver-meta__item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.driver-meta__label {
+  font-size: 12px;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: #64748b;
+}
+
+.driver-meta__value {
+  font-weight: 700;
+  color: #0f172a;
+  word-break: break-word;
+}
+
+.driver-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
 .table-wrapper {

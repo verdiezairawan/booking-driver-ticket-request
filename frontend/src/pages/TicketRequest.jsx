@@ -14,9 +14,10 @@ const initialForm = {
   purpose_of_travel: '',
   trip_type: '',
   hotel_accommodation: 'no',
+  hotel_name: '',
+  hotel_location: '',
   transportation_mode: '',
   transportation_other: '',
-  special_requests: '',
   superior_approval_note: '',
   additional_notes: '',
 }
@@ -29,10 +30,20 @@ function TicketRequest() {
   const [errorMessage, setErrorMessage] = useState('')
 
   const handleChange = (field) => (event) => {
-    setForm((prev) => ({
-      ...prev,
-      [field]: event.target.value,
-    }))
+    const value = event.target.value
+    setForm((prev) => {
+      const next = {
+        ...prev,
+        [field]: value,
+      }
+
+      if (field === 'hotel_accommodation' && value !== 'yes') {
+        next.hotel_name = ''
+        next.hotel_location = ''
+      }
+
+      return next
+    })
   }
 
   const handleSubmit = async (event) => {
@@ -51,6 +62,11 @@ function TicketRequest() {
     const payload = {
       ...form,
       hotel_accommodation: form.hotel_accommodation === 'yes',
+    }
+
+    if (form.hotel_accommodation !== 'yes') {
+      payload.hotel_name = null
+      payload.hotel_location = null
     }
 
     try {
@@ -90,7 +106,7 @@ function TicketRequest() {
       <div className="ticket-request-page">
         <header className="ticket-request-header">
           <button className="back-link" type="button" onClick={() => navigate(-1)}>
-            ← Back
+            &larr; Back
           </button>
           <div>
             <p className="eyebrow">Ticket Request</p>
@@ -109,34 +125,46 @@ function TicketRequest() {
               </div>
             </div>
             <div className="field-grid">
-              <input
-                type="text"
-                placeholder="Full name"
-                value={form.full_name}
-                onChange={handleChange('full_name')}
-                required
-              />
-              <input
-                type="tel"
-                placeholder="Phone Number"
-                value={form.phone_number}
-                onChange={handleChange('phone_number')}
-                required
-              />
-              <input
-                type="email"
-                placeholder="Email address"
-                value={form.email}
-                onChange={handleChange('email')}
-                required
-              />
-              <input
-                type="text"
-                placeholder="National ID (KTP)"
-                value={form.national_id}
-                onChange={handleChange('national_id')}
-                required
-              />
+              <label className="inline-label">
+                <span>Full name</span>
+                <input
+                  type="text"
+                  placeholder="Full name"
+                  value={form.full_name}
+                  onChange={handleChange('full_name')}
+                  required
+                />
+              </label>
+              <label className="inline-label">
+                <span>Phone number</span>
+                <input
+                  type="tel"
+                  placeholder="Phone Number"
+                  value={form.phone_number}
+                  onChange={handleChange('phone_number')}
+                  required
+                />
+              </label>
+              <label className="inline-label">
+                <span>Email</span>
+                <input
+                  type="email"
+                  placeholder="Email address"
+                  value={form.email}
+                  onChange={handleChange('email')}
+                  required
+                />
+              </label>
+              <label className="inline-label">
+                <span>National ID (KTP)</span>
+                <input
+                  type="text"
+                  placeholder="National ID (KTP)"
+                  value={form.national_id}
+                  onChange={handleChange('national_id')}
+                  required
+                />
+              </label>
             </div>
           </section>
 
@@ -149,20 +177,26 @@ function TicketRequest() {
               </div>
             </div>
             <div className="field-grid">
-              <input
-                type="text"
-                placeholder="Destination"
-                value={form.destination}
-                onChange={handleChange('destination')}
-                required
-              />
-              <input
-                type="text"
-                placeholder="Departure point (airport/station)"
-                value={form.departure_point}
-                onChange={handleChange('departure_point')}
-                required
-              />
+              <label className="inline-label">
+                <span>Destination</span>
+                <input
+                  type="text"
+                  placeholder="Destination"
+                  value={form.destination}
+                  onChange={handleChange('destination')}
+                  required
+                />
+              </label>
+              <label className="inline-label">
+                <span>Departure point</span>
+                <input
+                  type="text"
+                  placeholder="Departure point (airport/station)"
+                  value={form.departure_point}
+                  onChange={handleChange('departure_point')}
+                  required
+                />
+              </label>
               <label className="inline-label">
                 <span>Departure date</span>
                 <input type="date" value={form.departure_date} onChange={handleChange('departure_date')} required />
@@ -171,21 +205,27 @@ function TicketRequest() {
                 <span>Departure time</span>
                 <input type="time" value={form.departure_time} onChange={handleChange('departure_time')} required />
               </label>
-              <textarea
-                placeholder="Purpose of travel"
-                rows="3"
-                value={form.purpose_of_travel}
-                onChange={handleChange('purpose_of_travel')}
-                required
-              />
-              <select value={form.trip_type} onChange={handleChange('trip_type')} required>
-                <option value="" disabled>
-                  Type of trip
-                </option>
-                <option value="one-way">One way</option>
-                <option value="round-trip">Return</option>
-                <option value="full-trip">Full Trip</option>
-              </select>
+              <label className="inline-label">
+                <span>Purpose of travel</span>
+                <textarea
+                  placeholder="Purpose of travel"
+                  rows="3"
+                  value={form.purpose_of_travel}
+                  onChange={handleChange('purpose_of_travel')}
+                  required
+                />
+              </label>
+              <label className="inline-label">
+                <span>Type of trip</span>
+                <select value={form.trip_type} onChange={handleChange('trip_type')} required>
+                  <option value="" disabled>
+                    Type of trip
+                  </option>
+                  <option value="one-way">One way</option>
+                  <option value="round-trip">Return</option>
+                  <option value="full-trip">Full Trip</option>
+                </select>
+              </label>
             </div>
           </section>
 
@@ -200,54 +240,75 @@ function TicketRequest() {
             <div className="field-grid">
               <div className="radio-row">
                 <span>Hotel accommodation?</span>
-                <label>
-                  <input
-                    type="radio"
-                    name="hotel"
-                    value="yes"
-                    checked={form.hotel_accommodation === 'yes'}
-                    onChange={handleChange('hotel_accommodation')}
-                  />{' '}
-                  Yes
-                </label>
-                <label>
-                  <input
-                    type="radio"
-                    name="hotel"
-                    value="no"
-                    checked={form.hotel_accommodation === 'no'}
-                    onChange={handleChange('hotel_accommodation')}
-                  />{' '}
-                  No
-                </label>
+                <div className="radio-options">
+                  <label>
+                    <input
+                      type="radio"
+                      name="hotel"
+                      value="yes"
+                      checked={form.hotel_accommodation === 'yes'}
+                      onChange={handleChange('hotel_accommodation')}
+                    />{' '}
+                    Yes
+                  </label>
+                  <label>
+                    <input
+                      type="radio"
+                      name="hotel"
+                      value="no"
+                      checked={form.hotel_accommodation === 'no'}
+                      onChange={handleChange('hotel_accommodation')}
+                    />{' '}
+                    No
+                  </label>
+                </div>
               </div>
-              <select
-                value={form.transportation_mode}
-                onChange={handleChange('transportation_mode')}
-                aria-label="Preferred mode of transportation"
-                required
-              >
-                <option value="" disabled>
-                  Preferred mode of transportation
-                </option>
-                <option value="plane">Plane</option>
-                <option value="train">Train</option>
-                <option value="car">Car</option>
-                <option value="bus">Bus</option>
-                <option value="other">Other</option>
-              </select>
-              <input
-                type="text"
-                placeholder="If other, write name"
-                value={form.transportation_other}
-                onChange={handleChange('transportation_other')}
-              />
-              <textarea
-                placeholder="Special requests"
-                rows="3"
-                value={form.special_requests}
-                onChange={handleChange('special_requests')}
-              />
+              {form.hotel_accommodation === 'yes' ? (
+                <>
+                  <label className="inline-label">
+                    <span>Hotel name</span>
+                    <input
+                      type="text"
+                      placeholder="Hotel name"
+                      value={form.hotel_name}
+                      onChange={handleChange('hotel_name')}
+                      required
+                    />
+                  </label>
+                  <label className="inline-label">
+                    <span>Hotel location</span>
+                    <input
+                      type="text"
+                      placeholder="Hotel location"
+                      value={form.hotel_location}
+                      onChange={handleChange('hotel_location')}
+                      required
+                    />
+                  </label>
+                </>
+              ) : null}
+              <label className="inline-label">
+                <span>Preferred mode of transportation</span>
+                <select value={form.transportation_mode} onChange={handleChange('transportation_mode')} required>
+                  <option value="" disabled>
+                    Preferred mode of transportation
+                  </option>
+                  <option value="plane">Plane</option>
+                  <option value="train">Train</option>
+                  <option value="car">Car</option>
+                  <option value="bus">Bus</option>
+                  <option value="other">Other</option>
+                </select>
+              </label>
+              <label className="inline-label">
+                <span>Other transportation (optional)</span>
+                <input
+                  type="text"
+                  placeholder="If other, write name"
+                  value={form.transportation_other}
+                  onChange={handleChange('transportation_other')}
+                />
+              </label>
             </div>
           </section>
 
@@ -260,18 +321,24 @@ function TicketRequest() {
               </div>
             </div>
             <div className="field-grid">
-              <textarea
-                placeholder="Superior approval note (link or description)"
-                rows="3"
-                value={form.superior_approval_note}
-                onChange={handleChange('superior_approval_note')}
-              />
-              <textarea
-                placeholder="Additional notes"
-                rows="4"
-                value={form.additional_notes}
-                onChange={handleChange('additional_notes')}
-              />
+              <label className="inline-label">
+                <span>Approval note (optional)</span>
+                <textarea
+                  placeholder="Superior approval note (link or description)"
+                  rows="3"
+                  value={form.superior_approval_note}
+                  onChange={handleChange('superior_approval_note')}
+                />
+              </label>
+              <label className="inline-label">
+                <span>Additional notes (optional)</span>
+                <textarea
+                  placeholder="Additional notes"
+                  rows="4"
+                  value={form.additional_notes}
+                  onChange={handleChange('additional_notes')}
+                />
+              </label>
             </div>
           </section>
 

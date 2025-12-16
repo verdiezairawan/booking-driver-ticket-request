@@ -238,35 +238,61 @@ function OfficeManageUser() {
                   </div>
                 </div>
                 <div className="field-grid">
-                  <input placeholder="Nama User" value={createForm.name} onChange={handleCreateChange('name')} required />
-                  <input
-                    placeholder="User Dept/Job Position"
-                    value={createForm.dept_job_position}
-                    onChange={handleCreateChange('dept_job_position')}
-                    required
-                  />
-                  <select value={createForm.role} onChange={handleCreateChange('role')} required>
-                    <option value="user">user</option>
-                    <option value="driver">driver</option>
-                    <option value="office_coordinator">office_coordinator</option>
-                    <option value="superadmin">superadmin</option>
-                  </select>
-                  <input placeholder="NIK" value={createForm.nik} onChange={handleCreateChange('nik')} required />
-                  <input placeholder="Phone" value={createForm.phone} onChange={handleCreateChange('phone')} required />
-                  <input
-                    type="email"
-                    placeholder="Email"
-                    value={createForm.email}
-                    onChange={handleCreateChange('email')}
-                    required
-                  />
-                  <input
-                    type="password"
-                    placeholder="Password (min 6 chars)"
-                    value={createForm.password}
-                    onChange={handleCreateChange('password')}
-                    required
-                  />
+                  <label className="inline-label">
+                    <span>Nama User</span>
+                    <input
+                      placeholder="Nama User"
+                      value={createForm.name}
+                      onChange={handleCreateChange('name')}
+                      required
+                    />
+                  </label>
+                  <label className="inline-label">
+                    <span>User Dept/Job Position</span>
+                    <input
+                      placeholder="User Dept/Job Position"
+                      value={createForm.dept_job_position}
+                      onChange={handleCreateChange('dept_job_position')}
+                      required
+                    />
+                  </label>
+                  <label className="inline-label">
+                    <span>Role</span>
+                    <select value={createForm.role} onChange={handleCreateChange('role')} required>
+                      <option value="user">user</option>
+                      <option value="driver">driver</option>
+                      <option value="office_coordinator">office_coordinator</option>
+                      <option value="superadmin">superadmin</option>
+                    </select>
+                  </label>
+                  <label className="inline-label">
+                    <span>NIK</span>
+                    <input placeholder="NIK" value={createForm.nik} onChange={handleCreateChange('nik')} required />
+                  </label>
+                  <label className="inline-label">
+                    <span>Phone</span>
+                    <input placeholder="Phone" value={createForm.phone} onChange={handleCreateChange('phone')} required />
+                  </label>
+                  <label className="inline-label">
+                    <span>Email</span>
+                    <input
+                      type="email"
+                      placeholder="Email"
+                      value={createForm.email}
+                      onChange={handleCreateChange('email')}
+                      required
+                    />
+                  </label>
+                  <label className="inline-label">
+                    <span>Password</span>
+                    <input
+                      type="password"
+                      placeholder="Password (min 6 chars)"
+                      value={createForm.password}
+                      onChange={handleCreateChange('password')}
+                      required
+                    />
+                  </label>
                 </div>
               </section>
 
@@ -291,22 +317,46 @@ function OfficeManageUser() {
                   </div>
                 </div>
                 <div className="field-grid">
-                  <input placeholder="Nama User" value={editForm.name} onChange={handleEditChange('name')} required />
-                  <input
-                    placeholder="User Dept/Job Position"
-                    value={editForm.dept_job_position}
-                    onChange={handleEditChange('dept_job_position')}
-                    required
-                  />
-                  <select value={editForm.role} onChange={handleEditChange('role')} required>
-                    <option value="user">user</option>
-                    <option value="driver">driver</option>
-                    <option value="office_coordinator">office_coordinator</option>
-                    <option value="superadmin">superadmin</option>
-                  </select>
-                  <input placeholder="NIK" value={editForm.nik} onChange={handleEditChange('nik')} required />
-                  <input placeholder="Phone" value={editForm.phone} onChange={handleEditChange('phone')} required />
-                  <input type="email" placeholder="Email" value={editForm.email} onChange={handleEditChange('email')} required />
+                  <label className="inline-label">
+                    <span>Nama User</span>
+                    <input placeholder="Nama User" value={editForm.name} onChange={handleEditChange('name')} required />
+                  </label>
+                  <label className="inline-label">
+                    <span>User Dept/Job Position</span>
+                    <input
+                      placeholder="User Dept/Job Position"
+                      value={editForm.dept_job_position}
+                      onChange={handleEditChange('dept_job_position')}
+                      required
+                    />
+                  </label>
+                  <label className="inline-label">
+                    <span>Role</span>
+                    <select value={editForm.role} onChange={handleEditChange('role')} required>
+                      <option value="user">user</option>
+                      <option value="driver">driver</option>
+                      <option value="office_coordinator">office_coordinator</option>
+                      <option value="superadmin">superadmin</option>
+                    </select>
+                  </label>
+                  <label className="inline-label">
+                    <span>NIK</span>
+                    <input placeholder="NIK" value={editForm.nik} onChange={handleEditChange('nik')} required />
+                  </label>
+                  <label className="inline-label">
+                    <span>Phone</span>
+                    <input placeholder="Phone" value={editForm.phone} onChange={handleEditChange('phone')} required />
+                  </label>
+                  <label className="inline-label">
+                    <span>Email</span>
+                    <input
+                      type="email"
+                      placeholder="Email"
+                      value={editForm.email}
+                      onChange={handleEditChange('email')}
+                      required
+                    />
+                  </label>
                 </div>
               </section>
 

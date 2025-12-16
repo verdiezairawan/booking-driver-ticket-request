@@ -74,7 +74,7 @@ function BookingHistory() {
       <div className="ticket-history">
         <header className="history-header">
           <button className="back-link" type="button" onClick={() => navigate(-1)}>
-            ← Back
+            &larr; Back
           </button>
           <div>
             <p className="eyebrow">Booking History</p>

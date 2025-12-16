@@ -161,27 +161,36 @@ function OfficeAssignDrivers() {
                 </div>
               </div>
               <div className="field-grid">
-                <input
-                  type="text"
-                  placeholder="Full name"
-                  value={form.requester_name}
-                  onChange={handleChange('requester_name')}
-                  required
-                />
-                <input
-                  type="tel"
-                  placeholder="Phone number"
-                  value={form.requester_phone}
-                  onChange={handleChange('requester_phone')}
-                  required
-                />
-                <input
-                  type="email"
-                  placeholder="Email address"
-                  value={form.requester_email}
-                  onChange={handleChange('requester_email')}
-                  required
-                />
+                <label className="inline-label">
+                  <span>Full name</span>
+                  <input
+                    type="text"
+                    placeholder="Full name"
+                    value={form.requester_name}
+                    onChange={handleChange('requester_name')}
+                    required
+                  />
+                </label>
+                <label className="inline-label">
+                  <span>Phone number</span>
+                  <input
+                    type="tel"
+                    placeholder="Phone number"
+                    value={form.requester_phone}
+                    onChange={handleChange('requester_phone')}
+                    required
+                  />
+                </label>
+                <label className="inline-label">
+                  <span>Email</span>
+                  <input
+                    type="email"
+                    placeholder="Email address"
+                    value={form.requester_email}
+                    onChange={handleChange('requester_email')}
+                    required
+                  />
+                </label>
               </div>
             </section>
 
@@ -194,28 +203,37 @@ function OfficeAssignDrivers() {
                 </div>
               </div>
               <div className="field-grid">
-                <input
-                  type="text"
-                  placeholder="Pickup location"
-                  value={form.pickup_location}
-                  onChange={handleChange('pickup_location')}
-                  required
-                />
-                <input
-                  type="text"
-                  placeholder="Destination"
-                  value={form.destination}
-                  onChange={handleChange('destination')}
-                  required
-                />
-                <select value={form.trip_type} onChange={handleChange('trip_type')} required>
-                  <option value="" disabled>
-                    Type of trip
-                  </option>
-                  <option value="antar">Antar</option>
-                  <option value="jemput">Jemput</option>
-                  <option value="fulltrip">Full Trip</option>
-                </select>
+                <label className="inline-label">
+                  <span>Pickup location</span>
+                  <input
+                    type="text"
+                    placeholder="Pickup location"
+                    value={form.pickup_location}
+                    onChange={handleChange('pickup_location')}
+                    required
+                  />
+                </label>
+                <label className="inline-label">
+                  <span>Destination</span>
+                  <input
+                    type="text"
+                    placeholder="Destination"
+                    value={form.destination}
+                    onChange={handleChange('destination')}
+                    required
+                  />
+                </label>
+                <label className="inline-label">
+                  <span>Type of trip</span>
+                  <select value={form.trip_type} onChange={handleChange('trip_type')} required>
+                    <option value="" disabled>
+                      Type of trip
+                    </option>
+                    <option value="antar">Antar</option>
+                    <option value="jemput">Jemput</option>
+                    <option value="fulltrip">Full Trip</option>
+                  </select>
+                </label>
                 <label className="inline-label">
                   <span>Departure date</span>
                   <input type="date" value={form.departure_date} onChange={handleChange('departure_date')} required />
@@ -246,13 +264,16 @@ function OfficeAssignDrivers() {
                 </div>
               </div>
               <div className="field-grid">
-                <input
-                  type="email"
-                  placeholder="Driver email"
-                  value={form.driver_email}
-                  onChange={handleChange('driver_email')}
-                  required
-                />
+                <label className="inline-label">
+                  <span>Driver email</span>
+                  <input
+                    type="email"
+                    placeholder="Driver email"
+                    value={form.driver_email}
+                    onChange={handleChange('driver_email')}
+                    required
+                  />
+                </label>
               </div>
             </section>
 
