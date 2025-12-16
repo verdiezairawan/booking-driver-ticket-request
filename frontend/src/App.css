@@ -664,33 +664,41 @@
 /* Office coordinator dashboard */
 .office-dashboard {
   display: grid;
-  grid-template-columns: 260px 1fr;
+  grid-template-columns: 230px 1fr;
   min-height: 70vh;
   gap: 24px;
   transition: grid-template-columns 0.2s ease;
   overflow: hidden;
 }
 
+.office-dashboard.fixed-sidebar {
+  margin-left: -24px;
+  margin-top: -24px;
+}
+
 .office-sidebar {
-  background-color: #f9fafb;
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  padding: 16px 0;
+  background-color: #ffffff;
+  border: 0;
+  border-right: 2px solid #74005b;
+  border-radius: 0;
+  padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.06);
+  gap: 0;
+  box-shadow: none;
   position: sticky;
-  top: 16px;
+  top: 0;
+  min-height: 100vh;
 }
 
 .sidebar-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 16px;
+  padding: 16px 16px 12px;
   font-weight: 700;
   color: var(--brand-bold);
+  border-bottom: 1px solid #e5e7eb;
 }
 
 .sidebar-role {
@@ -721,8 +729,8 @@
   background: #ffffff;
   border-bottom: 1px solid #e2e8f0;
   cursor: pointer;
-  font-weight: 600;
-  color: #343a40;
+  font-weight: 700;
+  color: var(--brand-bold);
   transition: background-color 0.15s ease, color 0.15s ease;
 }
 

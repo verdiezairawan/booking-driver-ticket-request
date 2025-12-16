@@ -9,6 +9,7 @@ import TicketHistory from './pages/TicketHistory'
 import BookingDriver from './pages/BookingDriver'
 import BookingHistory from './pages/BookingHistory'
 import OfficeDriverRequests from './pages/OfficeDriverRequests'
+import OfficeTicketRequests from './pages/OfficeTicketRequests'
 import ProtectedRoute from './components/ProtectedRoute'
 import './App.css'
 
@@ -78,7 +79,7 @@ function App() {
             path="/office/ticket-requests"
             element={
               <ProtectedRoute>
-                <OfficeDriverRequests />
+                <OfficeTicketRequests />
               </ProtectedRoute>
             }
           />

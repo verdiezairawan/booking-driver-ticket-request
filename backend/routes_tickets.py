@@ -84,6 +84,24 @@ def ensure_role(uid: str, allowed: tuple[str, ...]):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
 
 
+@router.get("/pending", response_model=list[TicketResponse])
+def list_pending_tickets(current_user=Depends(get_current_user)):
+    uid = current_user["uid"]
+    ensure_role(uid, ("office_coordinator", "superadmin"))
+
+    query = db.collection("tickets").where("status", "==", "pending")
+    snapshots = list(query.stream())
+
+    def created_at_value(doc):
+        value = doc.to_dict().get("created_at")
+        if isinstance(value, datetime):
+            return value
+        return datetime.min
+
+    sorted_docs = sorted(snapshots, key=created_at_value, reverse=True)
+    return [serialize_ticket(doc) for doc in sorted_docs]
+
+
 @router.post("", response_model=TicketResponse)
 def create_ticket(payload: TicketCreate, current_user=Depends(get_current_user)):
     uid = current_user["uid"]
