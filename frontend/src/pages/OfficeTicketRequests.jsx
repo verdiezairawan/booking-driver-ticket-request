@@ -19,6 +19,9 @@ function OfficeTicketRequests() {
   const [tickets, setTickets] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [actionMessage, setActionMessage] = useState('')
+  const [actionError, setActionError] = useState('')
+  const [processing, setProcessing] = useState({})
 
   useEffect(() => {
     const token = localStorage.getItem('authToken')
@@ -59,6 +62,52 @@ function OfficeTicketRequests() {
 
     loadTickets()
   }, [])
+
+  const handleStatusUpdate = async (ticketId, nextStatus) => {
+    const token = localStorage.getItem('authToken')
+    if (!token) {
+      setActionError('Authentication token not found.')
+      return
+    }
+
+    setProcessing((prev) => ({ ...prev, [ticketId]: true }))
+    setActionMessage('')
+    setActionError('')
+
+    try {
+      const res = await fetch(`http://localhost:8000/tickets/${ticketId}/status`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ status: nextStatus }),
+      })
+
+      if (!res.ok) {
+        let detail = 'Failed to update ticket status.'
+        try {
+          const data = await res.json()
+          if (data?.detail) detail = data.detail
+        } catch {
+          // ignore parse error
+        }
+        setActionError(detail)
+        return
+      }
+
+      setTickets((prev) => prev.filter((ticket) => ticket.id !== ticketId))
+      setActionMessage(`Ticket ${nextStatus}. Moved to ticket history.`)
+    } catch (err) {
+      setActionError('Network error. Please try again.')
+    } finally {
+      setProcessing((prev) => {
+        const next = { ...prev }
+        delete next[ticketId]
+        return next
+      })
+    }
+  }
 
   const formatDate = (value) => {
     if (!value) return '-'
@@ -104,6 +153,9 @@ function OfficeTicketRequests() {
             <h1>Ticket Requests</h1>
             <p className="muted">Manage ticket approvals and assignments</p>
           </header>
+
+          {actionMessage ? <p className="success-text">{actionMessage}</p> : null}
+          {actionError ? <p className="error-text">{actionError}</p> : null}
 
           <div className="office-table-wrapper">
             <table className="office-table">
@@ -169,9 +221,24 @@ function OfficeTicketRequests() {
                       <td>{ticket.additional_notes || '-'}</td>
                       <td>{ticket.status || '-'}</td>
                       <td>
-                        <button type="button" className="btn btn-primary" disabled>
-                          Action
-                        </button>
+                        <div className="office-row-actions">
+                          <button
+                            type="button"
+                            className="btn btn-primary"
+                            disabled={processing[ticket.id]}
+                            onClick={() => handleStatusUpdate(ticket.id, 'approved')}
+                          >
+                            Approve
+                          </button>
+                          <button
+                            type="button"
+                            className="btn btn-neutral"
+                            disabled={processing[ticket.id]}
+                            onClick={() => handleStatusUpdate(ticket.id, 'rejected')}
+                          >
+                            Reject
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))

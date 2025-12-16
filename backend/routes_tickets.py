@@ -1,5 +1,5 @@
 from datetime import date, datetime, time
-from typing import Optional
+from typing import Literal, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from firebase_admin import auth as firebase_auth
@@ -39,6 +39,10 @@ class TicketResponse(TicketCreate):
     status: str = Field(default="pending")
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
+
+
+class TicketStatusUpdate(BaseModel):
+    status: Literal["approved", "rejected"]
 
 
 def serialize_ticket(doc_snapshot) -> TicketResponse:
@@ -184,6 +188,28 @@ def create_travel_accommodation(payload: TicketCreate, current_user=Depends(get_
     doc_ref.set(data)
     snapshot = doc_ref.get()
     return serialize_ticket(snapshot)
+
+
+@router.patch("/{ticket_id}/status", response_model=TicketResponse)
+def update_ticket_status(ticket_id: str, payload: TicketStatusUpdate, current_user=Depends(get_current_user)):
+    uid = current_user["uid"]
+    ensure_role(uid, ("office_coordinator", "superadmin"))
+
+    doc_ref = db.collection("tickets").document(ticket_id)
+    snapshot = doc_ref.get()
+    if not snapshot.exists:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Ticket not found")
+
+    doc_ref.update(
+        {
+            "status": payload.status,
+            "processed_by": uid,
+            "updated_at": firestore.SERVER_TIMESTAMP,
+        }
+    )
+
+    updated_snapshot = doc_ref.get()
+    return serialize_ticket(updated_snapshot)
 
 
 @router.get("/my", response_model=list[TicketResponse])

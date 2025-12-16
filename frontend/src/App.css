@@ -979,6 +979,17 @@
   color: #ffffff;
 }
 
+.office-row-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.office-row-actions .btn {
+  padding: 8px 12px;
+  border-radius: 8px;
+}
+
 .office-pagination {
   display: flex;
   align-items: center;
