@@ -14,31 +14,11 @@ const menuItems = [
   'Report',
 ]
 
-function OfficeDriverRequests() {
+function OfficeTicketHistory() {
   const navigate = useNavigate()
-  const [profile, setProfile] = useState({ name: '' })
-  const [bookings, setBookings] = useState([])
+  const [tickets, setTickets] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-
-  useEffect(() => {
-    const token = localStorage.getItem('authToken')
-    if (!token) return
-    const loadProfile = async () => {
-      try {
-        const res = await fetch('http://localhost:8000/users/me', {
-          headers: { Authorization: `Bearer ${token}` },
-        })
-        if (res.ok) {
-          const data = await res.json()
-          setProfile({ name: data.name || data.email || 'User' })
-        }
-      } catch (err) {
-        console.error('Failed to load profile', err)
-      }
-    }
-    loadProfile()
-  }, [])
 
   useEffect(() => {
     const token = localStorage.getItem('authToken')
@@ -48,36 +28,36 @@ function OfficeDriverRequests() {
       return
     }
 
-    const loadBookings = async () => {
+    const loadTickets = async () => {
       setLoading(true)
       setError('')
       try {
-        const res = await fetch('http://localhost:8000/bookings/pending', {
+        const res = await fetch('http://localhost:8000/tickets/history', {
           headers: { Authorization: `Bearer ${token}` },
         })
         if (!res.ok) {
-          let detail = 'Failed to load bookings.'
+          let detail = 'Failed to load tickets.'
           try {
             const data = await res.json()
             if (data?.detail) detail = data.detail
-          } catch (err) {
+          } catch {
             // ignore parse error
           }
           setError(detail)
-          setBookings([])
+          setTickets([])
         } else {
           const data = await res.json()
-          setBookings(Array.isArray(data) ? data : [])
+          setTickets(Array.isArray(data) ? data : [])
         }
       } catch (err) {
         setError('Network error. Please try again.')
-        setBookings([])
+        setTickets([])
       } finally {
         setLoading(false)
       }
     }
 
-    loadBookings()
+    loadTickets()
   }, [])
 
   const formatDate = (value) => {
@@ -107,7 +87,7 @@ function OfficeDriverRequests() {
               <button
                 key={item}
                 type="button"
-                className={`sidebar-item ${item === 'Driver Requests' ? 'active' : ''}`}
+                className={`sidebar-item ${item === 'Ticket History' ? 'active' : ''}`}
                 onClick={() => handleNavigate(item)}
               >
                 {item}
@@ -118,9 +98,9 @@ function OfficeDriverRequests() {
 
         <section className="office-content">
           <header className="office-header">
-            <p className="eyebrow">Driver Requests</p>
-            <h1>List of all driver bookings</h1>
-            <p className="muted">Manage assignments and driver procurement</p>
+            <p className="eyebrow">Ticket History</p>
+            <h1>Ticket History</h1>
+            <p className="muted">All processed ticket requests (non-pending)</p>
           </header>
 
           <div className="office-table-wrapper">
@@ -130,55 +110,61 @@ function OfficeDriverRequests() {
                   <th>Name</th>
                   <th>Phone</th>
                   <th>Email</th>
-                  <th>Pickup Location</th>
-                  <th>Destination</th>
-                  <th>Passenger Count</th>
+                  <th>National ID</th>
                   <th>Departure Date</th>
+                  <th>Departure Time</th>
+                  <th>Departure Point</th>
+                  <th>Destination</th>
+                  <th>Purpose of Travel</th>
                   <th>Type of Trip</th>
-                  <th>Action</th>
+                  <th>Hotel Accommodation</th>
+                  <th>Hotel Name</th>
+                  <th>Hotel Location</th>
+                  <th>Transport Mode</th>
+                  <th>Attachment</th>
+                  <th>Notes</th>
+                  <th>Status</th>
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan="9" className="muted">
+                    <td colSpan="17" className="muted">
                       Loading...
                     </td>
                   </tr>
                 ) : error ? (
                   <tr>
-                    <td colSpan="9" className="error-text">
+                    <td colSpan="17" className="error-text">
                       {error}
                     </td>
                   </tr>
-                ) : bookings.length === 0 ? (
+                ) : tickets.length === 0 ? (
                   <tr>
-                    <td colSpan="9" className="muted">
-                      No driver requests found.
+                    <td colSpan="17" className="muted">
+                      No ticket history found.
                     </td>
                   </tr>
                 ) : (
-                  bookings.map((booking) => (
-                    <tr key={booking.id}>
-                      <td>-</td>
-                      <td>-</td>
-                      <td>-</td>
-                      <td>{booking.pickup_location || '-'}</td>
-                      <td>{booking.destination || '-'}</td>
-                      <td>{booking.passenger_count ?? '-'}</td>
-                      <td>{formatDate(booking.departure_time)}</td>
-                      <td>{booking.trip_type || '-'}</td>
-                      <td>
-                        <button
-                          type="button"
-                          className="btn btn-primary"
-                          onClick={() => {
-                            // TODO: open assign driver flow
-                          }}
-                        >
-                          Assign Driver
-                        </button>
-                      </td>
+                  tickets.map((ticket) => (
+                    <tr key={ticket.id}>
+                      <td>{ticket.full_name || '-'}</td>
+                      <td>{ticket.phone_number || '-'}</td>
+                      <td>{ticket.email || '-'}</td>
+                      <td>{ticket.national_id || '-'}</td>
+                      <td>{formatDate(ticket.departure_date)}</td>
+                      <td>{ticket.departure_time || '-'}</td>
+                      <td>{ticket.departure_point || '-'}</td>
+                      <td>{ticket.destination || '-'}</td>
+                      <td>{ticket.purpose_of_travel || '-'}</td>
+                      <td>{ticket.trip_type || '-'}</td>
+                      <td>{ticket.hotel_accommodation ? 'Yes' : 'No'}</td>
+                      <td>{ticket.hotel_name || '-'}</td>
+                      <td>{ticket.hotel_location || '-'}</td>
+                      <td>{ticket.transportation_mode || '-'}</td>
+                      <td>{ticket.superior_approval_note || '-'}</td>
+                      <td>{ticket.additional_notes || '-'}</td>
+                      <td>{ticket.status || '-'}</td>
                     </tr>
                   ))
                 )}
@@ -200,4 +186,4 @@ function OfficeDriverRequests() {
   )
 }
 
-export default OfficeDriverRequests
+export default OfficeTicketHistory

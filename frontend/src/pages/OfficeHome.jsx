@@ -86,6 +86,15 @@ function OfficeHome() {
     loadStats()
   }, [])
 
+  const handleNavigate = (item) => {
+    if (item === 'Dashboard') navigate('/office/home')
+    if (item === 'Ticket Requests') navigate('/office/ticket-requests')
+    if (item === 'Driver Requests') navigate('/office/driver-requests')
+    if (item === 'Ticket History') navigate('/office/ticket-history')
+    if (item === 'Driver History') navigate('/office/driver-history')
+    if (item === 'Travel Accommodation') navigate('/office/travel-accommodation')
+  }
+
   return (
     <MainLayout title="">
       <div className="office-dashboard fixed-sidebar">
@@ -94,16 +103,12 @@ function OfficeHome() {
             <span className="sidebar-role">Office Coordinator</span>
           </div>
           <nav className="sidebar-menu">
-            {menuItems.map((item, idx) => (
+            {menuItems.map((item) => (
               <button
                 key={item}
                 type="button"
-                className={`sidebar-item ${idx === 0 ? 'active' : ''}`}
-                onClick={() => {
-                  if (item === 'Ticket Requests') navigate('/office/ticket-requests')
-                  if (item === 'Driver Requests') navigate('/office/driver-requests')
-                  if (item === 'Dashboard') navigate('/office/home')
-                }}
+                className={`sidebar-item ${item === 'Dashboard' ? 'active' : ''}`}
+                onClick={() => handleNavigate(item)}
               >
                 {item}
               </button>

@@ -14,31 +14,11 @@ const menuItems = [
   'Report',
 ]
 
-function OfficeDriverRequests() {
+function OfficeDriverHistory() {
   const navigate = useNavigate()
-  const [profile, setProfile] = useState({ name: '' })
   const [bookings, setBookings] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-
-  useEffect(() => {
-    const token = localStorage.getItem('authToken')
-    if (!token) return
-    const loadProfile = async () => {
-      try {
-        const res = await fetch('http://localhost:8000/users/me', {
-          headers: { Authorization: `Bearer ${token}` },
-        })
-        if (res.ok) {
-          const data = await res.json()
-          setProfile({ name: data.name || data.email || 'User' })
-        }
-      } catch (err) {
-        console.error('Failed to load profile', err)
-      }
-    }
-    loadProfile()
-  }, [])
 
   useEffect(() => {
     const token = localStorage.getItem('authToken')
@@ -52,15 +32,15 @@ function OfficeDriverRequests() {
       setLoading(true)
       setError('')
       try {
-        const res = await fetch('http://localhost:8000/bookings/pending', {
+        const res = await fetch('http://localhost:8000/bookings/history', {
           headers: { Authorization: `Bearer ${token}` },
         })
         if (!res.ok) {
-          let detail = 'Failed to load bookings.'
+          let detail = 'Failed to load driver history.'
           try {
             const data = await res.json()
             if (data?.detail) detail = data.detail
-          } catch (err) {
+          } catch {
             // ignore parse error
           }
           setError(detail)
@@ -80,12 +60,6 @@ function OfficeDriverRequests() {
     loadBookings()
   }, [])
 
-  const formatDate = (value) => {
-    if (!value) return '-'
-    const dt = new Date(value)
-    return Number.isNaN(dt.getTime()) ? '-' : dt.toLocaleDateString('id-ID')
-  }
-
   const handleNavigate = (item) => {
     if (item === 'Dashboard') navigate('/office/home')
     if (item === 'Ticket Requests') navigate('/office/ticket-requests')
@@ -93,6 +67,12 @@ function OfficeDriverRequests() {
     if (item === 'Ticket History') navigate('/office/ticket-history')
     if (item === 'Driver History') navigate('/office/driver-history')
     if (item === 'Travel Accommodation') navigate('/office/travel-accommodation')
+  }
+
+  const formatDate = (value) => {
+    if (!value) return '-'
+    const dt = new Date(value)
+    return Number.isNaN(dt.getTime()) ? '-' : dt.toLocaleDateString('id-ID')
   }
 
   return (
@@ -107,7 +87,7 @@ function OfficeDriverRequests() {
               <button
                 key={item}
                 type="button"
-                className={`sidebar-item ${item === 'Driver Requests' ? 'active' : ''}`}
+                className={`sidebar-item ${item === 'Driver History' ? 'active' : ''}`}
                 onClick={() => handleNavigate(item)}
               >
                 {item}
@@ -118,9 +98,9 @@ function OfficeDriverRequests() {
 
         <section className="office-content">
           <header className="office-header">
-            <p className="eyebrow">Driver Requests</p>
-            <h1>List of all driver bookings</h1>
-            <p className="muted">Manage assignments and driver procurement</p>
+            <p className="eyebrow">Driver History</p>
+            <h1>Driver History</h1>
+            <p className="muted">All processed driver requests (non-pending)</p>
           </header>
 
           <div className="office-table-wrapper">
@@ -135,7 +115,7 @@ function OfficeDriverRequests() {
                   <th>Passenger Count</th>
                   <th>Departure Date</th>
                   <th>Type of Trip</th>
-                  <th>Action</th>
+                  <th>Driver</th>
                 </tr>
               </thead>
               <tbody>
@@ -154,7 +134,7 @@ function OfficeDriverRequests() {
                 ) : bookings.length === 0 ? (
                   <tr>
                     <td colSpan="9" className="muted">
-                      No driver requests found.
+                      No driver history found.
                     </td>
                   </tr>
                 ) : (
@@ -168,23 +148,14 @@ function OfficeDriverRequests() {
                       <td>{booking.passenger_count ?? '-'}</td>
                       <td>{formatDate(booking.departure_time)}</td>
                       <td>{booking.trip_type || '-'}</td>
-                      <td>
-                        <button
-                          type="button"
-                          className="btn btn-primary"
-                          onClick={() => {
-                            // TODO: open assign driver flow
-                          }}
-                        >
-                          Assign Driver
-                        </button>
-                      </td>
+                      <td>{booking.driver_name || booking.driver_id || '-'}</td>
                     </tr>
                   ))
                 )}
               </tbody>
             </table>
           </div>
+
           <div className="office-pagination">
             <button type="button" className="btn btn-neutral" disabled>
               Prev
@@ -200,4 +171,4 @@ function OfficeDriverRequests() {
   )
 }
 
-export default OfficeDriverRequests
+export default OfficeDriverHistory

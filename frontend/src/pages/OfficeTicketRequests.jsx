@@ -66,6 +66,15 @@ function OfficeTicketRequests() {
     return Number.isNaN(dt.getTime()) ? '-' : dt.toLocaleDateString('id-ID')
   }
 
+  const handleNavigate = (item) => {
+    if (item === 'Dashboard') navigate('/office/home')
+    if (item === 'Ticket Requests') navigate('/office/ticket-requests')
+    if (item === 'Driver Requests') navigate('/office/driver-requests')
+    if (item === 'Ticket History') navigate('/office/ticket-history')
+    if (item === 'Driver History') navigate('/office/driver-history')
+    if (item === 'Travel Accommodation') navigate('/office/travel-accommodation')
+  }
+
   return (
     <MainLayout title="">
       <div className="office-dashboard fixed-sidebar">
@@ -74,16 +83,12 @@ function OfficeTicketRequests() {
             <span className="sidebar-role">Office Coordinator</span>
           </div>
           <nav className="sidebar-menu">
-            {menuItems.map((item, idx) => (
+            {menuItems.map((item) => (
               <button
                 key={item}
                 type="button"
                 className={`sidebar-item ${item === 'Ticket Requests' ? 'active' : ''}`}
-                onClick={() => {
-                  if (item === 'Dashboard') navigate('/office/home')
-                  if (item === 'Ticket Requests') navigate('/office/ticket-requests')
-                  if (item === 'Driver Requests') navigate('/office/driver-requests')
-                }}
+                onClick={() => handleNavigate(item)}
               >
                 {item}
               </button>

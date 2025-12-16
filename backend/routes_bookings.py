@@ -33,6 +33,10 @@ class BookingResponse(BaseModel):
     updated_at: Optional[datetime] = None
 
 
+class BookingOfficeHistoryResponse(BookingResponse):
+    driver_name: Optional[str] = None
+
+
 class BookingStatusUpdate(BaseModel):
     status: Literal["approved", "rejected", "completed"]
     driver_id: Optional[str] = None
@@ -157,6 +161,54 @@ def list_assigned_bookings(current_user=Depends(get_current_user)):
 
     query = db.collection("bookings").where("driver_id", "==", uid)
     return [serialize_booking(doc) for doc in query.stream()]
+
+
+@router.get("/history", response_model=list[BookingOfficeHistoryResponse])
+def list_booking_history(current_user=Depends(get_current_user)):
+    uid = current_user["uid"]
+    ensure_role(uid, ("office_coordinator", "superadmin"))
+
+    snapshots = list(db.collection("bookings").stream())
+
+    def created_at_value(doc):
+        value = doc.to_dict().get("created_at")
+        if isinstance(value, datetime):
+            return value
+        return datetime.min
+
+    history_docs = []
+    for doc in snapshots:
+        data = doc.to_dict() or {}
+        if data.get("status", "pending") != "pending":
+            history_docs.append(doc)
+
+    sorted_docs = sorted(history_docs, key=created_at_value, reverse=True)
+
+    driver_name_cache: dict[str, Optional[str]] = {}
+
+    def resolve_driver_name(driver_id: Optional[str]) -> Optional[str]:
+        if not driver_id:
+            return None
+        if driver_id in driver_name_cache:
+            return driver_name_cache[driver_id]
+
+        doc = db.collection("users").document(driver_id).get()
+        name = None
+        if doc.exists:
+            data = doc.to_dict() or {}
+            name = data.get("name") or data.get("email")
+
+        driver_name_cache[driver_id] = name
+        return name
+
+    results: list[BookingOfficeHistoryResponse] = []
+    for doc in sorted_docs:
+        booking = serialize_booking(doc)
+        data = doc.to_dict() or {}
+        driver_name = data.get("driver_name") or resolve_driver_name(booking.driver_id)
+        results.append(BookingOfficeHistoryResponse(**booking.model_dump(), driver_name=driver_name))
+
+    return results
 
 
 @router.get("/stats")

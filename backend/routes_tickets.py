@@ -2,6 +2,7 @@ from datetime import date, datetime, time
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from firebase_admin import auth as firebase_auth
 from firebase_admin import firestore
 from pydantic import BaseModel, Field
 
@@ -23,6 +24,8 @@ class TicketCreate(BaseModel):
     purpose_of_travel: str
     trip_type: str
     hotel_accommodation: bool
+    hotel_name: Optional[str] = None
+    hotel_location: Optional[str] = None
     transportation_mode: str
     transportation_other: Optional[str] = None
     special_requests: Optional[str] = None
@@ -32,7 +35,7 @@ class TicketCreate(BaseModel):
 
 class TicketResponse(TicketCreate):
     id: str
-    user_id: str
+    user_id: Optional[str] = None
     status: str = Field(default="pending")
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
@@ -54,6 +57,8 @@ def serialize_ticket(doc_snapshot) -> TicketResponse:
         purpose_of_travel=data.get("purpose_of_travel"),
         trip_type=data.get("trip_type"),
         hotel_accommodation=data.get("hotel_accommodation"),
+        hotel_name=data.get("hotel_name"),
+        hotel_location=data.get("hotel_location"),
         transportation_mode=data.get("transportation_mode"),
         transportation_other=data.get("transportation_other"),
         special_requests=data.get("special_requests"),
@@ -102,6 +107,29 @@ def list_pending_tickets(current_user=Depends(get_current_user)):
     return [serialize_ticket(doc) for doc in sorted_docs]
 
 
+@router.get("/history", response_model=list[TicketResponse])
+def list_ticket_history(current_user=Depends(get_current_user)):
+    uid = current_user["uid"]
+    ensure_role(uid, ("office_coordinator", "superadmin"))
+
+    snapshots = list(db.collection("tickets").stream())
+
+    def created_at_value(doc):
+        value = doc.to_dict().get("created_at")
+        if isinstance(value, datetime):
+            return value
+        return datetime.min
+
+    history_docs = []
+    for doc in snapshots:
+        data = doc.to_dict() or {}
+        if data.get("status", "pending") != "pending":
+            history_docs.append(doc)
+
+    sorted_docs = sorted(history_docs, key=created_at_value, reverse=True)
+    return [serialize_ticket(doc) for doc in sorted_docs]
+
+
 @router.post("", response_model=TicketResponse)
 def create_ticket(payload: TicketCreate, current_user=Depends(get_current_user)):
     uid = current_user["uid"]
@@ -116,6 +144,38 @@ def create_ticket(payload: TicketCreate, current_user=Depends(get_current_user))
         "departure_date": departure_date_value,
         "user_id": uid,
         "status": "pending",
+        "created_at": firestore.SERVER_TIMESTAMP,
+        "updated_at": firestore.SERVER_TIMESTAMP,
+    }
+
+    doc_ref = db.collection("tickets").document()
+    doc_ref.set(data)
+    snapshot = doc_ref.get()
+    return serialize_ticket(snapshot)
+
+
+@router.post("/accommodation", response_model=TicketResponse)
+def create_travel_accommodation(payload: TicketCreate, current_user=Depends(get_current_user)):
+    uid = current_user["uid"]
+    ensure_role(uid, ("office_coordinator", "superadmin"))
+
+    linked_user_id = None
+    try:
+        user_record = firebase_auth.get_user_by_email(payload.email)
+        linked_user_id = user_record.uid
+    except Exception:
+        linked_user_id = None
+
+    departure_date_value = payload.departure_date
+    if isinstance(departure_date_value, date) and not isinstance(departure_date_value, datetime):
+        departure_date_value = datetime.combine(departure_date_value, time.min)
+
+    data = {
+        **payload.model_dump(),
+        "departure_date": departure_date_value,
+        "user_id": linked_user_id,
+        "status": "approved",
+        "created_by": uid,
         "created_at": firestore.SERVER_TIMESTAMP,
         "updated_at": firestore.SERVER_TIMESTAMP,
     }

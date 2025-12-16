@@ -10,6 +10,9 @@ import BookingDriver from './pages/BookingDriver'
 import BookingHistory from './pages/BookingHistory'
 import OfficeDriverRequests from './pages/OfficeDriverRequests'
 import OfficeTicketRequests from './pages/OfficeTicketRequests'
+import OfficeTicketHistory from './pages/OfficeTicketHistory'
+import OfficeDriverHistory from './pages/OfficeDriverHistory'
+import OfficeTravelAccommodation from './pages/OfficeTravelAccommodation'
 import ProtectedRoute from './components/ProtectedRoute'
 import './App.css'
 
@@ -88,6 +91,30 @@ function App() {
             element={
               <ProtectedRoute>
                 <OfficeDriverRequests />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/office/ticket-history"
+            element={
+              <ProtectedRoute>
+                <OfficeTicketHistory />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/office/driver-history"
+            element={
+              <ProtectedRoute>
+                <OfficeDriverHistory />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/office/travel-accommodation"
+            element={
+              <ProtectedRoute>
+                <OfficeTravelAccommodation />
               </ProtectedRoute>
             }
           />
