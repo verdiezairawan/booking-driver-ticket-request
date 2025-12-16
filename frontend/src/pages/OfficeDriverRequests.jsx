@@ -93,6 +93,7 @@ function OfficeDriverRequests() {
     if (item === 'Ticket History') navigate('/office/ticket-history')
     if (item === 'Driver History') navigate('/office/driver-history')
     if (item === 'Travel Accommodation') navigate('/office/travel-accommodation')
+    if (item === 'Assign Drivers') navigate('/office/assign-drivers')
   }
 
   return (
@@ -160,9 +161,9 @@ function OfficeDriverRequests() {
                 ) : (
                   bookings.map((booking) => (
                     <tr key={booking.id}>
-                      <td>-</td>
-                      <td>-</td>
-                      <td>-</td>
+                      <td>{booking.requester_name || '-'}</td>
+                      <td>{booking.requester_phone || '-'}</td>
+                      <td>{booking.requester_email || '-'}</td>
                       <td>{booking.pickup_location || '-'}</td>
                       <td>{booking.destination || '-'}</td>
                       <td>{booking.passenger_count ?? '-'}</td>

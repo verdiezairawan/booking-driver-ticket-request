@@ -13,6 +13,7 @@ import OfficeTicketRequests from './pages/OfficeTicketRequests'
 import OfficeTicketHistory from './pages/OfficeTicketHistory'
 import OfficeDriverHistory from './pages/OfficeDriverHistory'
 import OfficeTravelAccommodation from './pages/OfficeTravelAccommodation'
+import OfficeAssignDrivers from './pages/OfficeAssignDrivers'
 import ProtectedRoute from './components/ProtectedRoute'
 import './App.css'
 
@@ -115,6 +116,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <OfficeTravelAccommodation />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/office/assign-drivers"
+            element={
+              <ProtectedRoute>
+                <OfficeAssignDrivers />
               </ProtectedRoute>
             }
           />

@@ -93,6 +93,7 @@ function OfficeHome() {
     if (item === 'Ticket History') navigate('/office/ticket-history')
     if (item === 'Driver History') navigate('/office/driver-history')
     if (item === 'Travel Accommodation') navigate('/office/travel-accommodation')
+    if (item === 'Assign Drivers') navigate('/office/assign-drivers')
   }
 
   return (

@@ -2,6 +2,7 @@ from datetime import datetime
 from typing import Literal, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from firebase_admin import auth as firebase_auth
 from firebase_admin import firestore
 from pydantic import BaseModel, Field
 
@@ -19,10 +20,25 @@ class BookingCreate(BaseModel):
     passenger_count: int = Field(..., ge=1)
 
 
+class BookingAssignCreate(BaseModel):
+    requester_name: str = Field(..., min_length=1)
+    requester_phone: str = Field(..., min_length=1)
+    requester_email: str = Field(..., min_length=1)
+    driver_email: str = Field(..., min_length=1)
+    pickup_location: str = Field(..., min_length=1)
+    destination: str = Field(..., min_length=1)
+    trip_type: Literal["antar", "jemput", "fulltrip"]
+    departure_time: datetime
+    passenger_count: int = Field(..., ge=1)
+
+
 class BookingResponse(BaseModel):
     id: str
-    user_id: str
+    user_id: Optional[str] = None
     driver_id: Optional[str] = None
+    requester_name: Optional[str] = None
+    requester_phone: Optional[str] = None
+    requester_email: Optional[str] = None
     pickup_location: str
     destination: str
     trip_type: Literal["antar", "jemput", "fulltrip"]
@@ -48,6 +64,9 @@ def serialize_booking(doc_snapshot) -> BookingResponse:
         id=doc_snapshot.id,
         user_id=data.get("user_id"),
         driver_id=data.get("driver_id"),
+        requester_name=data.get("requester_name"),
+        requester_phone=data.get("requester_phone"),
+        requester_email=data.get("requester_email"),
         pickup_location=data.get("pickup_location"),
         destination=data.get("destination"),
         trip_type=data.get("trip_type"),
@@ -74,10 +93,19 @@ def create_booking(payload: BookingCreate, current_user=Depends(get_current_user
     uid = current_user["uid"]
     ensure_role(uid, ("user",))
 
+    requester_name = None
+    requester_phone = None
+    doc = db.collection("users").document(uid).get()
+    if doc.exists:
+        data = doc.to_dict() or {}
+        requester_name = data.get("name")
+        requester_phone = data.get("phone_number") or data.get("phone")
+
     doc_ref = db.collection("bookings").document()
     data = {
         "user_id": uid,
         "driver_id": None,
+        "requester_email": current_user.get("email"),
         "pickup_location": payload.pickup_location,
         "destination": payload.destination,
         "trip_type": payload.trip_type,
@@ -87,9 +115,65 @@ def create_booking(payload: BookingCreate, current_user=Depends(get_current_user
         "created_at": firestore.SERVER_TIMESTAMP,
         "updated_at": firestore.SERVER_TIMESTAMP,
     }
+    if requester_name:
+        data["requester_name"] = requester_name
+    if requester_phone:
+        data["requester_phone"] = requester_phone
     doc_ref.set(data)
     snapshot = doc_ref.get()
     return serialize_booking(snapshot)
+
+
+@router.post("/assign", response_model=BookingOfficeHistoryResponse)
+def assign_driver(payload: BookingAssignCreate, current_user=Depends(get_current_user)):
+    uid = current_user["uid"]
+    ensure_role(uid, ("office_coordinator", "superadmin"))
+
+    try:
+        driver_record = firebase_auth.get_user_by_email(payload.driver_email)
+    except Exception:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Driver not found")
+
+    driver_uid = driver_record.uid
+    driver_doc = db.collection("users").document(driver_uid).get()
+    if not driver_doc.exists:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Driver profile not found")
+
+    driver_data = driver_doc.to_dict() or {}
+    if driver_data.get("role") != "driver":
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Selected user is not a driver")
+
+    driver_name = driver_data.get("name") or driver_record.email
+
+    linked_user_id = None
+    try:
+        requester_record = firebase_auth.get_user_by_email(payload.requester_email)
+        linked_user_id = requester_record.uid
+    except Exception:
+        linked_user_id = None
+
+    doc_ref = db.collection("bookings").document()
+    data = {
+        "user_id": linked_user_id,
+        "driver_id": driver_uid,
+        "driver_name": driver_name,
+        "requester_name": payload.requester_name,
+        "requester_phone": payload.requester_phone,
+        "requester_email": payload.requester_email,
+        "pickup_location": payload.pickup_location,
+        "destination": payload.destination,
+        "trip_type": payload.trip_type,
+        "departure_time": payload.departure_time,
+        "passenger_count": payload.passenger_count,
+        "status": "approved",
+        "created_by": uid,
+        "created_at": firestore.SERVER_TIMESTAMP,
+        "updated_at": firestore.SERVER_TIMESTAMP,
+    }
+    doc_ref.set(data)
+    snapshot = doc_ref.get()
+    booking = serialize_booking(snapshot)
+    return BookingOfficeHistoryResponse(**booking.model_dump(), driver_name=driver_name)
 
 
 @router.get("/my", response_model=list[BookingResponse])
