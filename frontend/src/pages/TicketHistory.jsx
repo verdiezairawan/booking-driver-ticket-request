@@ -109,13 +109,19 @@ function TicketHistory() {
               <thead>
                 <tr>
                   <th>Submission Date</th>
+                  <th>Name</th>
+                  <th>NIK</th>
+                  <th>Dept/Job Position</th>
+                  <th>Phone</th>
+                  <th>Email</th>
                   <th>Departure Date</th>
                   <th>Departure Point</th>
                   <th>Destination</th>
                   <th>Type of Trip</th>
                   <th>Hotel Accommodation</th>
+                  <th>Hotel Name</th>
+                  <th>Hotel Location</th>
                   <th>Transportation</th>
-                  <th>Special Requests</th>
                   <th>Approval Note</th>
                   <th>Additional Notes</th>
                   <th>Status</th>
@@ -124,7 +130,7 @@ function TicketHistory() {
               <tbody>
                 {tickets.length === 0 ? (
                   <tr>
-                    <td colSpan="11" className="muted">
+                    <td colSpan="15" className="muted">
                       Belum ada pengajuan tiket.
                     </td>
                   </tr>
@@ -132,13 +138,19 @@ function TicketHistory() {
                   tickets.map((ticket) => (
                     <tr key={ticket.id}>
                       <td>{formatDate(ticket.created_at)}</td>
+                      <td className="cell-wrap">{ticket.full_name || '-'}</td>
+                      <td>{ticket.national_id || '-'}</td>
+                      <td className="cell-wrap">{ticket.dept_job_position || '-'}</td>
+                      <td>{ticket.phone_number || '-'}</td>
+                      <td className="cell-wrap">{ticket.email || '-'}</td>
                       <td>{formatDateTime(ticket.departure_date, ticket.departure_time)}</td>
                       <td className="cell-wrap">{ticket.departure_point || '-'}</td>
                       <td>{ticket.destination || '-'}</td>
                       <td>{ticket.trip_type || '-'}</td>
                       <td>{formatBool(ticket.hotel_accommodation)}</td>
+                      <td className="cell-wrap">{ticket.hotel_name || '-'}</td>
+                      <td className="cell-wrap">{ticket.hotel_location || '-'}</td>
                       <td>{ticket.transportation_mode || '-'}</td>
-                      <td className="cell-wrap">{ticket.special_requests || '-'}</td>
                       <td className="cell-wrap">{ticket.superior_approval_note || '-'}</td>
                       <td className="cell-wrap">{ticket.additional_notes || '-'}</td>
                       <td className={`status-badge status-${(ticket.status || 'pending').toLowerCase()}`}>

@@ -14,6 +14,7 @@ router = APIRouter(prefix="/tickets", tags=["tickets"])
 
 class TicketCreate(BaseModel):
     full_name: str
+    dept_job_position: Optional[str] = None
     phone_number: str
     email: str
     national_id: str
@@ -51,6 +52,7 @@ def serialize_ticket(doc_snapshot) -> TicketResponse:
         id=doc_snapshot.id,
         user_id=data.get("user_id"),
         full_name=data.get("full_name"),
+        dept_job_position=data.get("dept_job_position"),
         phone_number=data.get("phone_number"),
         email=data.get("email"),
         national_id=data.get("national_id"),

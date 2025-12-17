@@ -4,6 +4,7 @@ import MainLayout from '../components/MainLayout'
 
 const initialForm = {
   full_name: '',
+  dept_job_position: '',
   phone_number: '',
   email: '',
   national_id: '',
@@ -132,6 +133,16 @@ function TicketRequest() {
                   placeholder="Full name"
                   value={form.full_name}
                   onChange={handleChange('full_name')}
+                  required
+                />
+              </label>
+              <label className="inline-label">
+                <span>User Dept/Job Position</span>
+                <input
+                  type="text"
+                  placeholder="User Dept/Job Position"
+                  value={form.dept_job_position}
+                  onChange={handleChange('dept_job_position')}
                   required
                 />
               </label>
