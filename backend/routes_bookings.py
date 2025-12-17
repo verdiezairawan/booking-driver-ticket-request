@@ -45,6 +45,11 @@ class BookingResponse(BaseModel):
     departure_time: datetime
     passenger_count: int
     status: str
+    starting_mileage: Optional[int] = None
+    ending_mileage: Optional[int] = None
+    completion_proof: Optional[str] = None
+    started_at: Optional[datetime] = None
+    completed_at: Optional[datetime] = None
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
 
@@ -56,6 +61,15 @@ class BookingOfficeHistoryResponse(BookingResponse):
 class BookingStatusUpdate(BaseModel):
     status: Literal["approved", "rejected", "completed"]
     driver_id: Optional[str] = None
+
+
+class BookingStart(BaseModel):
+    starting_mileage: int = Field(..., ge=0)
+
+
+class BookingComplete(BaseModel):
+    ending_mileage: int = Field(..., ge=0)
+    completion_proof: str = Field(..., min_length=1)
 
 
 def serialize_booking(doc_snapshot) -> BookingResponse:
@@ -73,6 +87,11 @@ def serialize_booking(doc_snapshot) -> BookingResponse:
         departure_time=data.get("departure_time"),
         passenger_count=data.get("passenger_count"),
         status=data.get("status"),
+        starting_mileage=data.get("starting_mileage"),
+        ending_mileage=data.get("ending_mileage"),
+        completion_proof=data.get("completion_proof"),
+        started_at=data.get("started_at"),
+        completed_at=data.get("completed_at"),
         created_at=data.get("created_at"),
         updated_at=data.get("updated_at"),
     )
@@ -234,6 +253,79 @@ def update_booking_status(
         updates["driver_id"] = payload.driver_id
 
     doc_ref.update(updates)
+    updated_snapshot = doc_ref.get()
+    return serialize_booking(updated_snapshot)
+
+
+@router.patch("/{booking_id}/start", response_model=BookingResponse)
+def start_booking(booking_id: str, payload: BookingStart, current_user=Depends(get_current_user)):
+    uid = current_user["uid"]
+    ensure_role(uid, ("driver",))
+
+    doc_ref = db.collection("bookings").document(booking_id)
+    snapshot = doc_ref.get()
+    if not snapshot.exists:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Booking not found")
+
+    data = snapshot.to_dict() or {}
+    if data.get("driver_id") != uid:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
+
+    if data.get("status") != "approved":
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Booking is not in an approvable state")
+
+    if data.get("starting_mileage") is not None:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Booking already started")
+
+    doc_ref.update(
+        {
+            "starting_mileage": payload.starting_mileage,
+            "started_at": firestore.SERVER_TIMESTAMP,
+            "updated_at": firestore.SERVER_TIMESTAMP,
+        }
+    )
+
+    updated_snapshot = doc_ref.get()
+    return serialize_booking(updated_snapshot)
+
+
+@router.patch("/{booking_id}/complete", response_model=BookingResponse)
+def complete_booking(booking_id: str, payload: BookingComplete, current_user=Depends(get_current_user)):
+    uid = current_user["uid"]
+    ensure_role(uid, ("driver",))
+
+    doc_ref = db.collection("bookings").document(booking_id)
+    snapshot = doc_ref.get()
+    if not snapshot.exists:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Booking not found")
+
+    data = snapshot.to_dict() or {}
+    if data.get("driver_id") != uid:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
+
+    if data.get("status") != "approved":
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Booking is not in an approvable state")
+
+    starting = data.get("starting_mileage")
+    if starting is None:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Booking must be started first")
+
+    if isinstance(starting, int) and payload.ending_mileage < starting:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Ending mileage must be greater than or equal to starting mileage",
+        )
+
+    doc_ref.update(
+        {
+            "ending_mileage": payload.ending_mileage,
+            "completion_proof": payload.completion_proof,
+            "status": "completed",
+            "completed_at": firestore.SERVER_TIMESTAMP,
+            "updated_at": firestore.SERVER_TIMESTAMP,
+        }
+    )
+
     updated_snapshot = doc_ref.get()
     return serialize_booking(updated_snapshot)
 

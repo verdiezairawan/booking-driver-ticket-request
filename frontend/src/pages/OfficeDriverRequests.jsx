@@ -20,6 +20,15 @@ function OfficeDriverRequests() {
   const [bookings, setBookings] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [actionMessage, setActionMessage] = useState('')
+  const [actionError, setActionError] = useState('')
+  const [processing, setProcessing] = useState({})
+  const [drivers, setDrivers] = useState([])
+  const [driversLoading, setDriversLoading] = useState(false)
+  const [driversError, setDriversError] = useState('')
+  const [assignModalOpen, setAssignModalOpen] = useState(false)
+  const [assignTarget, setAssignTarget] = useState(null)
+  const [selectedDriverId, setSelectedDriverId] = useState('')
 
   useEffect(() => {
     const token = localStorage.getItem('authToken')
@@ -38,6 +47,45 @@ function OfficeDriverRequests() {
       }
     }
     loadProfile()
+  }, [])
+
+  useEffect(() => {
+    const token = localStorage.getItem('authToken')
+    if (!token) return
+
+    const loadDrivers = async () => {
+      setDriversLoading(true)
+      setDriversError('')
+
+      try {
+        const res = await fetch('http://localhost:8000/users', {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        if (!res.ok) {
+          let detail = 'Failed to load drivers.'
+          try {
+            const data = await res.json()
+            if (data?.detail) detail = data.detail
+          } catch {
+            // ignore parse error
+          }
+          setDriversError(detail)
+          setDrivers([])
+          return
+        }
+
+        const data = await res.json()
+        const allUsers = Array.isArray(data) ? data : []
+        setDrivers(allUsers.filter((user) => user.role === 'driver'))
+      } catch (err) {
+        setDriversError('Network error. Please try again.')
+        setDrivers([])
+      } finally {
+        setDriversLoading(false)
+      }
+    }
+
+    loadDrivers()
   }, [])
 
   useEffect(() => {
@@ -79,6 +127,119 @@ function OfficeDriverRequests() {
 
     loadBookings()
   }, [])
+
+  const openAssignModal = (booking) => {
+    setAssignTarget(booking)
+    setSelectedDriverId('')
+    setAssignModalOpen(true)
+    setActionMessage('')
+    setActionError('')
+  }
+
+  const closeAssignModal = () => {
+    setAssignModalOpen(false)
+    setAssignTarget(null)
+    setSelectedDriverId('')
+  }
+
+  const handleAssign = async () => {
+    if (!assignTarget?.id) return
+    if (!selectedDriverId) {
+      setActionError('Please select a driver.')
+      return
+    }
+
+    const token = localStorage.getItem('authToken')
+    if (!token) {
+      setActionError('Authentication token not found.')
+      return
+    }
+
+    setProcessing((prev) => ({ ...prev, [assignTarget.id]: true }))
+    setActionMessage('')
+    setActionError('')
+
+    try {
+      const res = await fetch(`http://localhost:8000/bookings/${assignTarget.id}/status`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ status: 'approved', driver_id: selectedDriverId }),
+      })
+
+      if (!res.ok) {
+        let detail = 'Failed to assign driver.'
+        try {
+          const data = await res.json()
+          if (data?.detail) detail = data.detail
+        } catch {
+          // ignore parse error
+        }
+        setActionError(detail)
+        return
+      }
+
+      setBookings((prev) => prev.filter((booking) => booking.id !== assignTarget.id))
+      setActionMessage('Driver assigned. Moved to driver history and will appear in driver tasks.')
+      closeAssignModal()
+    } catch (err) {
+      setActionError('Network error. Please try again.')
+    } finally {
+      setProcessing((prev) => {
+        const next = { ...prev }
+        delete next[assignTarget.id]
+        return next
+      })
+    }
+  }
+
+  const handleReject = async (bookingId) => {
+    const token = localStorage.getItem('authToken')
+    if (!token) {
+      setActionError('Authentication token not found.')
+      return
+    }
+
+    setProcessing((prev) => ({ ...prev, [bookingId]: true }))
+    setActionMessage('')
+    setActionError('')
+
+    try {
+      const res = await fetch(`http://localhost:8000/bookings/${bookingId}/status`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ status: 'rejected' }),
+      })
+
+      if (!res.ok) {
+        let detail = 'Failed to reject booking.'
+        try {
+          const data = await res.json()
+          if (data?.detail) detail = data.detail
+        } catch {
+          // ignore parse error
+        }
+        setActionError(detail)
+        return
+      }
+
+      setBookings((prev) => prev.filter((booking) => booking.id !== bookingId))
+      setActionMessage('Booking rejected. Moved to driver history.')
+    } catch (err) {
+      setActionError('Network error. Please try again.')
+    } finally {
+      setProcessing((prev) => {
+        const next = { ...prev }
+        delete next[bookingId]
+        return next
+      })
+    }
+  }
 
   const formatDate = (value) => {
     if (!value) return '-'
@@ -124,6 +285,9 @@ function OfficeDriverRequests() {
             <h1>List of all driver bookings</h1>
             <p className="muted">Manage assignments and driver procurement</p>
           </header>
+
+          {actionMessage ? <p className="success-text">{actionMessage}</p> : null}
+          {actionError ? <p className="error-text">{actionError}</p> : null}
 
           <div className="office-table-wrapper">
             <table className="office-table">
@@ -171,15 +335,24 @@ function OfficeDriverRequests() {
                       <td>{formatDate(booking.departure_time)}</td>
                       <td>{booking.trip_type || '-'}</td>
                       <td>
-                        <button
-                          type="button"
-                          className="btn btn-primary"
-                          onClick={() => {
-                            // TODO: open assign driver flow
-                          }}
-                        >
-                          Assign Driver
-                        </button>
+                        <div className="office-row-actions">
+                          <button
+                            type="button"
+                            className="btn btn-primary"
+                            disabled={processing[booking.id]}
+                            onClick={() => openAssignModal(booking)}
+                          >
+                            Assign Driver
+                          </button>
+                          <button
+                            type="button"
+                            className="btn btn-neutral"
+                            disabled={processing[booking.id]}
+                            onClick={() => handleReject(booking.id)}
+                          >
+                            Reject
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))
@@ -196,6 +369,81 @@ function OfficeDriverRequests() {
               Next
             </button>
           </div>
+
+          {assignModalOpen ? (
+            <div
+              className="modal-overlay"
+              role="dialog"
+              aria-modal="true"
+              onClick={() => {
+                if (!processing[assignTarget?.id]) closeAssignModal()
+              }}
+            >
+              <div
+                className="modal"
+                onClick={(event) => {
+                  event.stopPropagation()
+                }}
+              >
+                <div className="modal-header">
+                  <h2>Assign Driver</h2>
+                  <button
+                    type="button"
+                    className="modal-close"
+                    onClick={closeAssignModal}
+                    disabled={processing[assignTarget?.id]}
+                    aria-label="Close"
+                  >
+                    &times;
+                  </button>
+                </div>
+
+                <p className="muted" style={{ marginTop: 0 }}>
+                  Select a driver for this request. After assigning, the request will move to driver history.
+                </p>
+
+                {driversError ? <p className="error-text">{driversError}</p> : null}
+
+                <label className="inline-label">
+                  <span>Driver</span>
+                  <select
+                    value={selectedDriverId}
+                    onChange={(e) => setSelectedDriverId(e.target.value)}
+                    disabled={driversLoading || processing[assignTarget?.id]}
+                    required
+                  >
+                    <option value="" disabled>
+                      {driversLoading ? 'Loading drivers...' : 'Select driver...'}
+                    </option>
+                    {drivers.map((driver) => (
+                      <option key={driver.uid} value={driver.uid}>
+                        {driver.name ? `${driver.name} (${driver.email})` : driver.email}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <div className="modal-actions">
+                  <button
+                    type="button"
+                    className="btn btn-primary"
+                    onClick={handleAssign}
+                    disabled={driversLoading || !drivers.length || processing[assignTarget?.id]}
+                  >
+                    Assign
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-neutral"
+                    onClick={closeAssignModal}
+                    disabled={processing[assignTarget?.id]}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : null}
         </section>
       </div>
     </MainLayout>

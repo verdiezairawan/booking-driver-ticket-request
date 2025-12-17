@@ -11,6 +11,16 @@ function DriverHome() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [tab, setTab] = useState(TABS.active)
+  const [actionMessage, setActionMessage] = useState('')
+  const [actionError, setActionError] = useState('')
+  const [processing, setProcessing] = useState({})
+
+  const [startModalOpen, setStartModalOpen] = useState(false)
+  const [finishModalOpen, setFinishModalOpen] = useState(false)
+  const [activeBooking, setActiveBooking] = useState(null)
+  const [startingMileage, setStartingMileage] = useState('')
+  const [endingMileage, setEndingMileage] = useState('')
+  const [completionProof, setCompletionProof] = useState('')
 
   useEffect(() => {
     const token = localStorage.getItem('authToken')
@@ -51,6 +61,161 @@ function DriverHome() {
 
     loadAssigned()
   }, [])
+
+  const updateBookingInState = (bookingId, updatedFields) => {
+    setBookings((prev) =>
+      prev.map((booking) => {
+        if (booking.id !== bookingId) return booking
+        return { ...booking, ...updatedFields }
+      })
+    )
+  }
+
+  const openStartModal = (booking) => {
+    setActiveBooking(booking)
+    setStartingMileage('')
+    setStartModalOpen(true)
+    setActionMessage('')
+    setActionError('')
+  }
+
+  const openFinishModal = (booking) => {
+    setActiveBooking(booking)
+    setEndingMileage('')
+    setCompletionProof('')
+    setFinishModalOpen(true)
+    setActionMessage('')
+    setActionError('')
+  }
+
+  const closeModals = () => {
+    setStartModalOpen(false)
+    setFinishModalOpen(false)
+    setActiveBooking(null)
+    setStartingMileage('')
+    setEndingMileage('')
+    setCompletionProof('')
+  }
+
+  const handleStart = async () => {
+    if (!activeBooking?.id) return
+
+    const mileageValue = Number(startingMileage)
+    if (!Number.isFinite(mileageValue) || mileageValue < 0) {
+      setActionError('Starting mileage must be a valid number.')
+      return
+    }
+
+    const token = localStorage.getItem('authToken')
+    if (!token) {
+      setActionError('Authentication token not found.')
+      return
+    }
+
+    setProcessing((prev) => ({ ...prev, [activeBooking.id]: true }))
+    setActionMessage('')
+    setActionError('')
+
+    try {
+      const res = await fetch(`http://localhost:8000/bookings/${activeBooking.id}/start`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ starting_mileage: mileageValue }),
+      })
+
+      if (!res.ok) {
+        let detail = 'Failed to start booking.'
+        try {
+          const data = await res.json()
+          if (data?.detail) detail = data.detail
+        } catch {
+          // ignore parse error
+        }
+        setActionError(detail)
+        return
+      }
+
+      const updated = await res.json()
+      updateBookingInState(activeBooking.id, updated)
+      setActionMessage('Trip started.')
+      closeModals()
+    } catch (err) {
+      setActionError('Network error. Please try again.')
+    } finally {
+      setProcessing((prev) => {
+        const next = { ...prev }
+        delete next[activeBooking.id]
+        return next
+      })
+    }
+  }
+
+  const handleFinish = async () => {
+    if (!activeBooking?.id) return
+
+    const endingValue = Number(endingMileage)
+    if (!Number.isFinite(endingValue) || endingValue < 0) {
+      setActionError('Ending mileage must be a valid number.')
+      return
+    }
+
+    if (!completionProof.trim()) {
+      setActionError('Completion proof is required.')
+      return
+    }
+
+    const token = localStorage.getItem('authToken')
+    if (!token) {
+      setActionError('Authentication token not found.')
+      return
+    }
+
+    setProcessing((prev) => ({ ...prev, [activeBooking.id]: true }))
+    setActionMessage('')
+    setActionError('')
+
+    try {
+      const res = await fetch(`http://localhost:8000/bookings/${activeBooking.id}/complete`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          ending_mileage: endingValue,
+          completion_proof: completionProof.trim(),
+        }),
+      })
+
+      if (!res.ok) {
+        let detail = 'Failed to complete booking.'
+        try {
+          const data = await res.json()
+          if (data?.detail) detail = data.detail
+        } catch {
+          // ignore parse error
+        }
+        setActionError(detail)
+        return
+      }
+
+      const updated = await res.json()
+      updateBookingInState(activeBooking.id, updated)
+      setActionMessage('Trip completed.')
+      closeModals()
+    } catch (err) {
+      setActionError('Network error. Please try again.')
+    } finally {
+      setProcessing((prev) => {
+        const next = { ...prev }
+        delete next[activeBooking.id]
+        return next
+      })
+    }
+  }
 
   const counts = useMemo(() => {
     const activeCount = bookings.filter((b) => (b.status || 'pending') !== 'completed').length
@@ -129,6 +294,8 @@ function DriverHome() {
 
         {loading ? <p className="muted">Loading assignments...</p> : null}
         {!loading && error ? <p className="error-text">{error}</p> : null}
+        {!loading && !error && actionMessage ? <p className="success-text">{actionMessage}</p> : null}
+        {!loading && !error && actionError ? <p className="error-text">{actionError}</p> : null}
 
         {!loading && !error && items.length === 0 ? (
           <div className="driver-empty">
@@ -142,6 +309,8 @@ function DriverHome() {
             {items.map((booking) => {
               const phone = booking.requester_phone || ''
               const email = booking.requester_email || ''
+              const isCompleted = booking.status === 'completed'
+              const isStarted = booking.starting_mileage !== null && booking.starting_mileage !== undefined
               return (
                 <article key={booking.id} className="driver-card">
                   <div className="driver-card__top">
@@ -180,22 +349,136 @@ function DriverHome() {
                   </div>
 
                   <div className="driver-actions">
-                    <a className={`btn btn-neutral ${phone ? '' : 'btn-disabled'}`} href={phone ? `tel:${phone}` : '#'}>
-                      Call
-                    </a>
-                    <a
-                      className={`btn btn-neutral ${email ? '' : 'btn-disabled'}`}
-                      href={email ? `mailto:${email}` : '#'}
-                    >
-                      Email
-                    </a>
-                    <button type="button" className="btn btn-neutral" disabled>
-                      Mark Completed
-                    </button>
+                    {!isCompleted ? (
+                      <button
+                        type="button"
+                        className="btn btn-neutral"
+                        disabled={processing[booking.id]}
+                        onClick={() => {
+                          if (isStarted) {
+                            openFinishModal(booking)
+                          } else {
+                            openStartModal(booking)
+                          }
+                        }}
+                      >
+                        {isStarted ? 'Selesai' : 'Start'}
+                      </button>
+                    ) : null}
                   </div>
                 </article>
               )
             })}
+          </div>
+        ) : null}
+
+        {startModalOpen ? (
+          <div className="modal-overlay" role="dialog" aria-modal="true" onClick={closeModals}>
+            <div
+              className="modal"
+              onClick={(event) => {
+                event.stopPropagation()
+              }}
+            >
+              <div className="modal-header">
+                <h2>Start Trip</h2>
+                <button type="button" className="modal-close" onClick={closeModals} aria-label="Close">
+                  &times;
+                </button>
+              </div>
+
+              {actionError ? <p className="error-text">{actionError}</p> : null}
+
+              <div className="field-grid">
+                <label className="inline-label">
+                  <span>Starting mileage</span>
+                  <input
+                    type="number"
+                    min="0"
+                    placeholder="Starting mileage"
+                    value={startingMileage}
+                    onChange={(e) => setStartingMileage(e.target.value)}
+                    required
+                  />
+                </label>
+              </div>
+
+              <div className="modal-actions">
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={handleStart}
+                  disabled={processing[activeBooking?.id]}
+                >
+                  Save & Start
+                </button>
+                <button type="button" className="btn btn-neutral" onClick={closeModals} disabled={processing[activeBooking?.id]}>
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : null}
+
+        {finishModalOpen ? (
+          <div className="modal-overlay" role="dialog" aria-modal="true" onClick={closeModals}>
+            <div
+              className="modal"
+              onClick={(event) => {
+                event.stopPropagation()
+              }}
+            >
+              <div className="modal-header">
+                <h2>Completion Report</h2>
+                <button type="button" className="modal-close" onClick={closeModals} aria-label="Close">
+                  &times;
+                </button>
+              </div>
+
+              {actionError ? <p className="error-text">{actionError}</p> : null}
+
+              <div className="field-grid">
+                <label className="inline-label">
+                  <span>Starting mileage</span>
+                  <input type="number" value={activeBooking?.starting_mileage ?? ''} disabled readOnly />
+                </label>
+                <label className="inline-label">
+                  <span>Ending mileage</span>
+                  <input
+                    type="number"
+                    min="0"
+                    placeholder="Ending mileage"
+                    value={endingMileage}
+                    onChange={(e) => setEndingMileage(e.target.value)}
+                    required
+                  />
+                </label>
+                <label className="inline-label">
+                  <span>Proof of completion (text)</span>
+                  <input
+                    type="text"
+                    placeholder="Proof (photo link / description)"
+                    value={completionProof}
+                    onChange={(e) => setCompletionProof(e.target.value)}
+                    required
+                  />
+                </label>
+              </div>
+
+              <div className="modal-actions">
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={handleFinish}
+                  disabled={processing[activeBooking?.id]}
+                >
+                  Save
+                </button>
+                <button type="button" className="btn btn-neutral" onClick={closeModals} disabled={processing[activeBooking?.id]}>
+                  Cancel
+                </button>
+              </div>
+            </div>
           </div>
         ) : null}
       </div>
