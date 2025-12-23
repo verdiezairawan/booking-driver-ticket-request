@@ -166,7 +166,13 @@ function OfficeTicketHistory() {
                       <td>{ticket.transportation_mode || '-'}</td>
                       <td>{ticket.superior_approval_note || '-'}</td>
                       <td>{ticket.additional_notes || '-'}</td>
-                      <td>{ticket.status || '-'}</td>
+                      <td>
+                        {ticket.status ? (
+                          <span className={`status-badge status-${String(ticket.status).toLowerCase()}`}>{ticket.status}</span>
+                        ) : (
+                          '-'
+                        )}
+                      </td>
                     </tr>
                   ))
                 )}

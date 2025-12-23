@@ -412,7 +412,7 @@ function DriverHome() {
                 >
                   Save & Start
                 </button>
-                <button type="button" className="btn btn-neutral" onClick={closeModals} disabled={processing[activeBooking?.id]}>
+                <button type="button" className="btn btn-outline-danger" onClick={closeModals} disabled={processing[activeBooking?.id]}>
                   Cancel
                 </button>
               </div>
@@ -474,7 +474,7 @@ function DriverHome() {
                 >
                   Save
                 </button>
-                <button type="button" className="btn btn-neutral" onClick={closeModals} disabled={processing[activeBooking?.id]}>
+                <button type="button" className="btn btn-outline-danger" onClick={closeModals} disabled={processing[activeBooking?.id]}>
                   Cancel
                 </button>
               </div>

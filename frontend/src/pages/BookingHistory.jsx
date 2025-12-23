@@ -7,6 +7,8 @@ function BookingHistory() {
   const [bookings, setBookings] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [actionError, setActionError] = useState('')
+  const [actionLoadingId, setActionLoadingId] = useState('')
 
   useEffect(() => {
     const fetchBookings = async () => {
@@ -50,6 +52,50 @@ function BookingHistory() {
     fetchBookings()
   }, [])
 
+  const handleEdit = (booking) => {
+    navigate('/user/booking-driver', { state: { booking } })
+  }
+
+  const handleCancel = async (bookingId) => {
+    const confirmed = window.confirm('Cancel this driver booking request?')
+    if (!confirmed) return
+
+    const token = localStorage.getItem('authToken')
+    if (!token) {
+      setActionError('Authentication token not found. Please login again.')
+      return
+    }
+
+    setActionLoadingId(bookingId)
+    setActionError('')
+
+    try {
+      const response = await fetch(`http://localhost:8000/bookings/${bookingId}/cancel`, {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${token}` },
+      })
+
+      if (!response.ok) {
+        let detail = 'Failed to cancel booking.'
+        try {
+          const data = await response.json()
+          if (data?.detail) detail = data.detail
+        } catch (err) {
+          // ignore parse error
+        }
+        setActionError(detail)
+        return
+      }
+
+      const updated = await response.json()
+      setBookings((prev) => prev.map((b) => (b.id === bookingId ? updated : b)))
+    } catch (err) {
+      setActionError('Network error. Please try again.')
+    } finally {
+      setActionLoadingId('')
+    }
+  }
+
   const toDate = (value) => {
     if (!value) return null
     if (value?.seconds) return new Date(value.seconds * 1000)
@@ -85,6 +131,7 @@ function BookingHistory() {
 
         {loading ? <p className="muted">Loading bookings...</p> : null}
         {error ? <p className="error-text">{error}</p> : null}
+        {actionError ? <p className="error-text">{actionError}</p> : null}
 
         {!loading && !error ? (
           <div className="table-wrapper">
@@ -97,28 +144,58 @@ function BookingHistory() {
                   <th>Trip Type</th>
                   <th>Departure</th>
                   <th>Status</th>
+                  <th>Action</th>
                 </tr>
               </thead>
               <tbody>
                 {bookings.length === 0 ? (
                   <tr>
-                    <td colSpan="6" className="muted">
+                    <td colSpan="7" className="muted">
                       Belum ada booking driver.
                     </td>
                   </tr>
                 ) : (
-                  bookings.map((booking) => (
-                    <tr key={booking.id}>
-                      <td>{formatDateOnly(booking.created_at)}</td>
-                      <td className="cell-wrap">{booking.pickup_location || '-'}</td>
-                      <td className="cell-wrap">{booking.destination || '-'}</td>
-                      <td>{booking.trip_type || '-'}</td>
-                      <td>{formatDateTime(booking.departure_time)}</td>
-                      <td className={`status-badge status-${(booking.status || 'pending').toLowerCase()}`}>
-                        {booking.status || 'pending'}
-                      </td>
-                    </tr>
-                  ))
+                  bookings.map((booking) => {
+                    const statusValue = (booking.status || 'pending').toLowerCase()
+                    const isPending = statusValue === 'pending'
+
+                    return (
+                      <tr key={booking.id}>
+                        <td>{formatDateOnly(booking.created_at)}</td>
+                        <td className="cell-wrap">{booking.pickup_location || '-'}</td>
+                        <td className="cell-wrap">{booking.destination || '-'}</td>
+                        <td>{booking.trip_type || '-'}</td>
+                        <td>{formatDateTime(booking.departure_time)}</td>
+                        <td>
+                          <span className={`status-badge status-${statusValue}`}>{booking.status || 'pending'}</span>
+                        </td>
+                        <td>
+                          {isPending ? (
+                            <div className="table-row-actions">
+                              <button
+                                type="button"
+                                className="btn btn-outline-brand"
+                                onClick={() => handleEdit(booking)}
+                                disabled={actionLoadingId === booking.id}
+                              >
+                                Edit
+                              </button>
+                              <button
+                                type="button"
+                                className="btn btn-danger"
+                                onClick={() => handleCancel(booking.id)}
+                                disabled={actionLoadingId === booking.id}
+                              >
+                                {actionLoadingId === booking.id ? 'Cancelling...' : 'Cancel'}
+                              </button>
+                            </div>
+                          ) : (
+                            '-'
+                          )}
+                        </td>
+                      </tr>
+                    )
+                  })
                 )}
               </tbody>
             </table>

@@ -214,6 +214,67 @@ def update_ticket_status(ticket_id: str, payload: TicketStatusUpdate, current_us
     return serialize_ticket(updated_snapshot)
 
 
+@router.patch("/{ticket_id}", response_model=TicketResponse)
+def update_ticket(ticket_id: str, payload: TicketCreate, current_user=Depends(get_current_user)):
+    uid = current_user["uid"]
+    ensure_user_role(uid)
+
+    doc_ref = db.collection("tickets").document(ticket_id)
+    snapshot = doc_ref.get()
+    if not snapshot.exists:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Ticket not found")
+
+    ticket_data = snapshot.to_dict() or {}
+    if ticket_data.get("user_id") != uid:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
+
+    if ticket_data.get("status", "pending") != "pending":
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Only pending tickets can be edited")
+
+    departure_date_value = payload.departure_date
+    if isinstance(departure_date_value, date) and not isinstance(departure_date_value, datetime):
+        departure_date_value = datetime.combine(departure_date_value, time.min)
+
+    update_data = {
+        **payload.model_dump(),
+        "departure_date": departure_date_value,
+        "updated_at": firestore.SERVER_TIMESTAMP,
+    }
+
+    doc_ref.update(update_data)
+    updated_snapshot = doc_ref.get()
+    return serialize_ticket(updated_snapshot)
+
+
+@router.patch("/{ticket_id}/cancel", response_model=TicketResponse)
+def cancel_ticket(ticket_id: str, current_user=Depends(get_current_user)):
+    uid = current_user["uid"]
+    ensure_user_role(uid)
+
+    doc_ref = db.collection("tickets").document(ticket_id)
+    snapshot = doc_ref.get()
+    if not snapshot.exists:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Ticket not found")
+
+    ticket_data = snapshot.to_dict() or {}
+    if ticket_data.get("user_id") != uid:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
+
+    if ticket_data.get("status", "pending") != "pending":
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Only pending tickets can be canceled")
+
+    doc_ref.update(
+        {
+            "status": "cancelled",
+            "cancelled_by": uid,
+            "updated_at": firestore.SERVER_TIMESTAMP,
+        }
+    )
+
+    updated_snapshot = doc_ref.get()
+    return serialize_ticket(updated_snapshot)
+
+
 @router.get("/my", response_model=list[TicketResponse])
 def list_my_tickets(current_user=Depends(get_current_user)):
     uid = current_user["uid"]

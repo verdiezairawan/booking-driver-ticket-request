@@ -118,24 +118,25 @@ function OfficeDriverHistory() {
                   <th>Departure Date</th>
                   <th>Type of Trip</th>
                   <th>Driver</th>
+                  <th>Status</th>
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan="9" className="muted">
+                    <td colSpan="10" className="muted">
                       Loading...
                     </td>
                   </tr>
                 ) : error ? (
                   <tr>
-                    <td colSpan="9" className="error-text">
+                    <td colSpan="10" className="error-text">
                       {error}
                     </td>
                   </tr>
                 ) : bookings.length === 0 ? (
                   <tr>
-                    <td colSpan="9" className="muted">
+                    <td colSpan="10" className="muted">
                       No driver history found.
                     </td>
                   </tr>
@@ -151,6 +152,15 @@ function OfficeDriverHistory() {
                       <td>{formatDate(booking.departure_time)}</td>
                       <td>{booking.trip_type || '-'}</td>
                       <td>{booking.driver_name || booking.driver_id || '-'}</td>
+                      <td>
+                        {booking.status ? (
+                          <span className={`status-badge status-${String(booking.status).toLowerCase()}`}>
+                            {booking.status}
+                          </span>
+                        ) : (
+                          '-'
+                        )}
+                      </td>
                     </tr>
                   ))
                 )}

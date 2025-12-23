@@ -87,6 +87,13 @@ function UserHome() {
     navigate('/user/booking-history')
   }
 
+  const handleCardKeyDown = (event, action) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault()
+      action()
+    }
+  }
+
   return (
     <MainLayout title="User Dashboard">
       <div className="user-dashboard">
@@ -134,47 +141,71 @@ function UserHome() {
           </div>
 
           <div className="actions-grid">
-            <article className="action-card action-primary">
+            <article
+              className="action-card action-primary is-clickable"
+              role="link"
+              tabIndex={0}
+              onClick={handleTicketRequest}
+              onKeyDown={(event) => handleCardKeyDown(event, handleTicketRequest)}
+            >
               <div className="action-icon">+</div>
               <div className="action-content">
                 <h3>Make a Ticket Request</h3>
                 <p className="muted">Submit a ticket request for business or travel needs</p>
-                <button className="link-cta" type="button" onClick={handleTicketRequest}>
-                  Make Request →
-                </button>
+                <span className="link-cta">
+                  Make Request <span aria-hidden="true">&rarr;</span>
+                </span>
               </div>
             </article>
 
-            <article className="action-card action-success">
+            <article
+              className="action-card action-success is-clickable"
+              role="link"
+              tabIndex={0}
+              onClick={handleBookingDriver}
+              onKeyDown={(event) => handleCardKeyDown(event, handleBookingDriver)}
+            >
               <div className="action-icon">+</div>
               <div className="action-content">
                 <h3>Book a Driver</h3>
                 <p className="muted">Request a driver for business travel or operational needs</p>
-                <button className="link-cta success" type="button" onClick={handleBookingDriver}>
-                  Make Request →
-                </button>
+                <span className="link-cta success">
+                  Make Request <span aria-hidden="true">&rarr;</span>
+                </span>
               </div>
             </article>
 
-            <article className="action-card action-plain">
+            <article
+              className="action-card action-plain is-clickable"
+              role="link"
+              tabIndex={0}
+              onClick={handleTicketHistory}
+              onKeyDown={(event) => handleCardKeyDown(event, handleTicketHistory)}
+            >
               <div className="action-icon icon-soft">T</div>
               <div className="action-content">
                 <h3>Ticket History</h3>
                 <p className="muted">View all your ticket requests</p>
-                <button className="link-cta" type="button" onClick={handleTicketHistory}>
-                  View →
-                </button>
+                <span className="link-cta">
+                  View <span aria-hidden="true">&rarr;</span>
+                </span>
               </div>
             </article>
 
-            <article className="action-card action-plain">
+            <article
+              className="action-card action-plain is-clickable"
+              role="link"
+              tabIndex={0}
+              onClick={handleBookingHistory}
+              onKeyDown={(event) => handleCardKeyDown(event, handleBookingHistory)}
+            >
               <div className="action-icon icon-soft">D</div>
               <div className="action-content">
                 <h3>Driver History</h3>
                 <p className="muted">View all your driver bookings</p>
-                <button className="link-cta" type="button" onClick={handleBookingHistory}>
-                  View →
-                </button>
+                <span className="link-cta">
+                  View <span aria-hidden="true">&rarr;</span>
+                </span>
               </div>
             </article>
           </div>

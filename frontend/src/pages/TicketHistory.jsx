@@ -7,6 +7,8 @@ function TicketHistory() {
   const [tickets, setTickets] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [actionError, setActionError] = useState('')
+  const [actionLoadingId, setActionLoadingId] = useState('')
 
   useEffect(() => {
     const fetchTickets = async () => {
@@ -52,6 +54,50 @@ function TicketHistory() {
 
     fetchTickets()
   }, [])
+
+  const handleEdit = (ticket) => {
+    navigate('/user/ticket-request', { state: { ticket } })
+  }
+
+  const handleCancel = async (ticketId) => {
+    const confirmed = window.confirm('Cancel this ticket request?')
+    if (!confirmed) return
+
+    const token = localStorage.getItem('authToken')
+    if (!token) {
+      setActionError('Authentication token not found. Please login again.')
+      return
+    }
+
+    setActionLoadingId(ticketId)
+    setActionError('')
+
+    try {
+      const response = await fetch(`http://localhost:8000/tickets/${ticketId}/cancel`, {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${token}` },
+      })
+
+      if (!response.ok) {
+        let detail = 'Failed to cancel ticket.'
+        try {
+          const data = await response.json()
+          if (data?.detail) detail = data.detail
+        } catch (err) {
+          // ignore parse error
+        }
+        setActionError(detail)
+        return
+      }
+
+      const updated = await response.json()
+      setTickets((prev) => prev.map((t) => (t.id === ticketId ? updated : t)))
+    } catch (err) {
+      setActionError('Network error. Please try again.')
+    } finally {
+      setActionLoadingId('')
+    }
+  }
 
   const toDate = (value) => {
     if (!value) return null
@@ -102,6 +148,7 @@ function TicketHistory() {
 
         {loading ? <p className="muted">Loading tickets...</p> : null}
         {error ? <p className="error-text">{error}</p> : null}
+        {actionError ? <p className="error-text">{actionError}</p> : null}
 
         {!loading && !error ? (
           <div className="table-wrapper">
@@ -125,18 +172,23 @@ function TicketHistory() {
                   <th>Approval Note</th>
                   <th>Additional Notes</th>
                   <th>Status</th>
+                  <th>Action</th>
                 </tr>
               </thead>
               <tbody>
                 {tickets.length === 0 ? (
                   <tr>
-                    <td colSpan="15" className="muted">
+                    <td colSpan="18" className="muted">
                       Belum ada pengajuan tiket.
                     </td>
                   </tr>
                 ) : (
-                  tickets.map((ticket) => (
-                    <tr key={ticket.id}>
+                  tickets.map((ticket) => {
+                    const statusValue = (ticket.status || 'pending').toLowerCase()
+                    const isPending = statusValue === 'pending'
+
+                    return (
+                      <tr key={ticket.id}>
                       <td>{formatDate(ticket.created_at)}</td>
                       <td className="cell-wrap">{ticket.full_name || '-'}</td>
                       <td>{ticket.national_id || '-'}</td>
@@ -153,11 +205,36 @@ function TicketHistory() {
                       <td>{ticket.transportation_mode || '-'}</td>
                       <td className="cell-wrap">{ticket.superior_approval_note || '-'}</td>
                       <td className="cell-wrap">{ticket.additional_notes || '-'}</td>
-                      <td className={`status-badge status-${(ticket.status || 'pending').toLowerCase()}`}>
-                        {ticket.status || 'pending'}
+                      <td>
+                        <span className={`status-badge status-${statusValue}`}>{ticket.status || 'pending'}</span>
                       </td>
-                    </tr>
-                  ))
+                      <td>
+                        {isPending ? (
+                          <div className="table-row-actions">
+                            <button
+                              type="button"
+                              className="btn btn-outline-brand"
+                              onClick={() => handleEdit(ticket)}
+                              disabled={actionLoadingId === ticket.id}
+                            >
+                              Edit
+                            </button>
+                            <button
+                              type="button"
+                              className="btn btn-danger"
+                              onClick={() => handleCancel(ticket.id)}
+                              disabled={actionLoadingId === ticket.id}
+                            >
+                              {actionLoadingId === ticket.id ? 'Cancelling...' : 'Cancel'}
+                            </button>
+                          </div>
+                        ) : (
+                          '-'
+                        )}
+                      </td>
+                      </tr>
+                    )
+                  })
                 )}
               </tbody>
             </table>

@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import MainLayout from '../components/MainLayout'
 
 const initialForm = {
@@ -25,10 +25,12 @@ const initialForm = {
 
 function TicketRequest() {
   const navigate = useNavigate()
+  const location = useLocation()
   const [form, setForm] = useState(initialForm)
   const [loading, setLoading] = useState(false)
-  const [successMessage, setSuccessMessage] = useState('')
   const [errorMessage, setErrorMessage] = useState('')
+  const [showSuccessModal, setShowSuccessModal] = useState(false)
+  const [editingTicketId, setEditingTicketId] = useState('')
 
   const handleChange = (field) => (event) => {
     const value = event.target.value
@@ -43,14 +45,49 @@ function TicketRequest() {
         next.hotel_location = ''
       }
 
+      if (field === 'transportation_mode' && value !== 'other') {
+        next.transportation_other = ''
+      }
+
       return next
     })
   }
 
+  useEffect(() => {
+    const ticket = location.state?.ticket
+    if (!ticket?.id) {
+      setEditingTicketId('')
+      setForm(initialForm)
+      return
+    }
+
+    setEditingTicketId(ticket.id)
+    setForm({
+      ...initialForm,
+      full_name: ticket.full_name || '',
+      dept_job_position: ticket.dept_job_position || '',
+      phone_number: ticket.phone_number || '',
+      email: ticket.email || '',
+      national_id: ticket.national_id || '',
+      destination: ticket.destination || '',
+      departure_point: ticket.departure_point || '',
+      departure_date: ticket.departure_date ? String(ticket.departure_date).slice(0, 10) : '',
+      departure_time: ticket.departure_time || '',
+      purpose_of_travel: ticket.purpose_of_travel || '',
+      trip_type: ticket.trip_type || '',
+      hotel_accommodation: ticket.hotel_accommodation ? 'yes' : 'no',
+      hotel_name: ticket.hotel_name || '',
+      hotel_location: ticket.hotel_location || '',
+      transportation_mode: ticket.transportation_mode || '',
+      transportation_other: ticket.transportation_other || '',
+      superior_approval_note: ticket.superior_approval_note || '',
+      additional_notes: ticket.additional_notes || '',
+    })
+  }, [location.state])
+
   const handleSubmit = async (event) => {
     event.preventDefault()
     setLoading(true)
-    setSuccessMessage('')
     setErrorMessage('')
 
     const token = localStorage.getItem('authToken')
@@ -70,9 +107,16 @@ function TicketRequest() {
       payload.hotel_location = null
     }
 
+    if (form.transportation_mode !== 'other') {
+      payload.transportation_other = null
+    }
+
     try {
-      const response = await fetch('http://localhost:8000/tickets', {
-        method: 'POST',
+      const endpoint = editingTicketId ? `http://localhost:8000/tickets/${editingTicketId}` : 'http://localhost:8000/tickets'
+      const method = editingTicketId ? 'PATCH' : 'POST'
+
+      const response = await fetch(endpoint, {
+        method,
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
@@ -92,8 +136,10 @@ function TicketRequest() {
         }
         setErrorMessage(detail)
       } else {
-        setSuccessMessage('Ticket request submitted successfully.')
-        setForm(initialForm)
+        if (!editingTicketId) {
+          setForm(initialForm)
+        }
+        setShowSuccessModal(true)
       }
     } catch (error) {
       setErrorMessage('Network error. Please try again.')
@@ -311,15 +357,17 @@ function TicketRequest() {
                   <option value="other">Other</option>
                 </select>
               </label>
-              <label className="inline-label">
-                <span>Other transportation (optional)</span>
-                <input
-                  type="text"
-                  placeholder="If other, write name"
-                  value={form.transportation_other}
-                  onChange={handleChange('transportation_other')}
-                />
-              </label>
+              {form.transportation_mode === 'other' ? (
+                <label className="inline-label">
+                  <span>Other transportation</span>
+                  <input
+                    type="text"
+                    placeholder="If other, write name"
+                    value={form.transportation_other}
+                    onChange={handleChange('transportation_other')}
+                  />
+                </label>
+              ) : null}
             </div>
           </section>
 
@@ -353,18 +401,50 @@ function TicketRequest() {
             </div>
           </section>
 
-          {successMessage ? <p className="success-text">{successMessage}</p> : null}
           {errorMessage ? <p className="error-text">{errorMessage}</p> : null}
 
           <div className="form-actions">
             <button type="submit" className="btn btn-primary" disabled={loading}>
-              {loading ? 'Submitting...' : 'Submit Request'}
+              {loading ? 'Submitting...' : editingTicketId ? 'Save Changes' : 'Submit Request'}
             </button>
-            <button type="button" className="btn btn-neutral" onClick={() => navigate('/user/home')}>
+            <button type="button" className="btn btn-outline-danger" onClick={() => navigate('/user/home')}>
               Batal
             </button>
           </div>
         </form>
+
+        {showSuccessModal ? (
+          <div className="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="ticket-success-title">
+            <div className="modal success-modal">
+              <div className="success-modal-icon" aria-hidden="true">
+                <i className="bi bi-check-lg" />
+              </div>
+              <h2 id="ticket-success-title" className="success-modal-title">
+                {editingTicketId ? 'Changes Saved' : 'Request Sent'}
+              </h2>
+              <p className="success-modal-message">
+                {editingTicketId
+                  ? 'Your ticket request was updated successfully.'
+                  : "Your travel request was sent successfully. We'll notify the office coordinator."}
+              </p>
+              <div className="success-modal-actions">
+                <button
+                  type="button"
+                  className="btn btn-brand"
+                  onClick={() => {
+                    setShowSuccessModal(false)
+                    navigate('/user/ticket-history')
+                  }}
+                >
+                  View History
+                </button>
+                <button type="button" className="btn btn-outline-brand" onClick={() => setShowSuccessModal(false)}>
+                  Back to Form
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : null}
       </div>
     </MainLayout>
   )

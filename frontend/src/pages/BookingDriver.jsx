@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import MainLayout from '../components/MainLayout'
 
 const initialForm = {
@@ -13,10 +13,32 @@ const initialForm = {
 
 function BookingDriver() {
   const navigate = useNavigate()
+  const location = useLocation()
   const [form, setForm] = useState(initialForm)
   const [loading, setLoading] = useState(false)
-  const [successMessage, setSuccessMessage] = useState('')
   const [errorMessage, setErrorMessage] = useState('')
+  const [showSuccessModal, setShowSuccessModal] = useState(false)
+  const [editingBookingId, setEditingBookingId] = useState('')
+
+  const toDate = (value) => {
+    if (!value) return null
+    if (value?.seconds) return new Date(value.seconds * 1000)
+    const parsed = new Date(value)
+    return Number.isNaN(parsed.getTime()) ? null : parsed
+  }
+
+  const formatDateInput = (date) => {
+    const year = String(date.getFullYear())
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
+  }
+
+  const formatTimeInput = (date) => {
+    const hours = String(date.getHours()).padStart(2, '0')
+    const minutes = String(date.getMinutes()).padStart(2, '0')
+    return `${hours}:${minutes}`
+  }
 
   const handleChange = (field) => (event) => {
     const value = field === 'passenger_count' ? event.target.value : event.target.value
@@ -26,10 +48,32 @@ function BookingDriver() {
     }))
   }
 
+  useEffect(() => {
+    const booking = location.state?.booking
+    if (!booking?.id) {
+      setEditingBookingId('')
+      setForm(initialForm)
+      return
+    }
+
+    setEditingBookingId(booking.id)
+    const departure = toDate(booking.departure_time)
+
+    setForm({
+      ...initialForm,
+      pickup_location: booking.pickup_location || '',
+      destination: booking.destination || '',
+      trip_type: booking.trip_type || '',
+      departure_date: departure ? formatDateInput(departure) : '',
+      departure_time: departure ? formatTimeInput(departure) : '',
+      passenger_count: booking.passenger_count ?? 1,
+    })
+    setErrorMessage('')
+  }, [location.state])
+
   const handleSubmit = async (event) => {
     event.preventDefault()
     setLoading(true)
-    setSuccessMessage('')
     setErrorMessage('')
 
     if (!form.departure_date || !form.departure_time) {
@@ -61,8 +105,13 @@ function BookingDriver() {
     }
 
     try {
-      const response = await fetch('http://localhost:8000/bookings', {
-        method: 'POST',
+      const endpoint = editingBookingId
+        ? `http://localhost:8000/bookings/${editingBookingId}`
+        : 'http://localhost:8000/bookings'
+      const method = editingBookingId ? 'PATCH' : 'POST'
+
+      const response = await fetch(endpoint, {
+        method,
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
@@ -82,8 +131,10 @@ function BookingDriver() {
         }
         setErrorMessage(detail)
       } else {
-        setSuccessMessage('Booking request submitted successfully.')
-        setForm(initialForm)
+        if (!editingBookingId) {
+          setForm(initialForm)
+        }
+        setShowSuccessModal(true)
       }
     } catch (error) {
       setErrorMessage('Network error. Please try again.')
@@ -101,7 +152,7 @@ function BookingDriver() {
           </button>
           <div>
             <p className="eyebrow">Booking Driver</p>
-            <h1>Buat Booking Baru</h1>
+            <h1>{editingBookingId ? 'Edit Booking' : 'Buat Booking Baru'}</h1>
             <p className="muted">Isi form berikut untuk permintaan driver</p>
           </div>
         </header>
@@ -179,18 +230,50 @@ function BookingDriver() {
             </div>
           </section>
 
-          {successMessage ? <p className="success-text">{successMessage}</p> : null}
           {errorMessage ? <p className="error-text">{errorMessage}</p> : null}
 
           <div className="form-actions">
             <button type="submit" className="btn btn-primary" disabled={loading}>
-              {loading ? 'Mengirim...' : 'Kirim Request'}
+              {loading ? 'Mengirim...' : editingBookingId ? 'Save Changes' : 'Kirim Request'}
             </button>
-            <button type="button" className="btn btn-neutral" onClick={() => navigate('/user/home')}>
+            <button type="button" className="btn btn-outline-danger" onClick={() => navigate('/user/home')}>
               Batal
             </button>
           </div>
         </form>
+
+        {showSuccessModal ? (
+          <div className="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="booking-success-title">
+            <div className="modal success-modal">
+              <div className="success-modal-icon" aria-hidden="true">
+                <i className="bi bi-check-lg" />
+              </div>
+              <h2 id="booking-success-title" className="success-modal-title">
+                {editingBookingId ? 'Changes Saved' : 'Request Sent'}
+              </h2>
+              <p className="success-modal-message">
+                {editingBookingId
+                  ? 'Your driver booking request was updated successfully.'
+                  : "Your driver booking request was sent successfully. We'll notify the office coordinator."}
+              </p>
+              <div className="success-modal-actions">
+                <button
+                  type="button"
+                  className="btn btn-brand"
+                  onClick={() => {
+                    setShowSuccessModal(false)
+                    navigate('/user/booking-history')
+                  }}
+                >
+                  View History
+                </button>
+                <button type="button" className="btn btn-outline-brand" onClick={() => setShowSuccessModal(false)}>
+                  Back to Form
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : null}
       </div>
     </MainLayout>
   )

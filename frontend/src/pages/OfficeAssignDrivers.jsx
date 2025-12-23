@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import MainLayout from '../components/MainLayout'
 
@@ -16,6 +16,8 @@ const menuItems = [
 
 const initialForm = {
   requester_name: '',
+  requester_dept_job_position: '',
+  requester_nik: '',
   requester_phone: '',
   requester_email: '',
   driver_email: '',
@@ -33,6 +35,51 @@ function OfficeAssignDrivers() {
   const [loading, setLoading] = useState(false)
   const [successMessage, setSuccessMessage] = useState('')
   const [errorMessage, setErrorMessage] = useState('')
+  const [drivers, setDrivers] = useState([])
+  const [driversLoading, setDriversLoading] = useState(false)
+  const [driversError, setDriversError] = useState('')
+
+  useEffect(() => {
+    const token = localStorage.getItem('authToken')
+    if (!token) {
+      setDriversError('Authentication token not found.')
+      return
+    }
+
+    const loadDrivers = async () => {
+      setDriversLoading(true)
+      setDriversError('')
+
+      try {
+        const res = await fetch('http://localhost:8000/users', {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        if (!res.ok) {
+          let detail = 'Failed to load drivers.'
+          try {
+            const data = await res.json()
+            if (data?.detail) detail = data.detail
+          } catch {
+            // ignore parse error
+          }
+          setDriversError(detail)
+          setDrivers([])
+          return
+        }
+
+        const data = await res.json()
+        const allUsers = Array.isArray(data) ? data : []
+        setDrivers(allUsers.filter((user) => user.role === 'driver'))
+      } catch (err) {
+        setDriversError('Network error. Please try again.')
+        setDrivers([])
+      } finally {
+        setDriversLoading(false)
+      }
+    }
+
+    loadDrivers()
+  }, [])
 
   const handleNavigate = (item) => {
     if (item === 'Dashboard') navigate('/office/home')
@@ -81,6 +128,8 @@ function OfficeAssignDrivers() {
 
     const payload = {
       requester_name: form.requester_name,
+      requester_dept_job_position: form.requester_dept_job_position,
+      requester_nik: form.requester_nik,
       requester_phone: form.requester_phone,
       requester_email: form.requester_email,
       driver_email: form.driver_email,
@@ -168,6 +217,26 @@ function OfficeAssignDrivers() {
                     placeholder="Full name"
                     value={form.requester_name}
                     onChange={handleChange('requester_name')}
+                    required
+                  />
+                </label>
+                <label className="inline-label">
+                  <span>User Dept/Job Position</span>
+                  <input
+                    type="text"
+                    placeholder="User Dept/Job Position"
+                    value={form.requester_dept_job_position}
+                    onChange={handleChange('requester_dept_job_position')}
+                    required
+                  />
+                </label>
+                <label className="inline-label">
+                  <span>NIK</span>
+                  <input
+                    type="text"
+                    placeholder="NIK"
+                    value={form.requester_nik}
+                    onChange={handleChange('requester_nik')}
                     required
                   />
                 </label>
@@ -260,19 +329,28 @@ function OfficeAssignDrivers() {
                 <div className="heading-icon">DR</div>
                 <div>
                   <h2>Driver</h2>
-                  <p className="muted">Assign a driver (by email)</p>
+                  <p className="muted">Assign a driver</p>
                 </div>
               </div>
               <div className="field-grid">
+                {driversError ? <p className="error-text">{driversError}</p> : null}
                 <label className="inline-label">
-                  <span>Driver email</span>
-                  <input
-                    type="email"
-                    placeholder="Driver email"
+                  <span>Driver</span>
+                  <select
                     value={form.driver_email}
                     onChange={handleChange('driver_email')}
+                    disabled={driversLoading || loading || !drivers.length}
                     required
-                  />
+                  >
+                    <option value="" disabled>
+                      {driversLoading ? 'Loading drivers...' : drivers.length ? 'Select driver...' : 'No drivers found'}
+                    </option>
+                    {drivers.map((driver) => (
+                      <option key={driver.uid} value={driver.email}>
+                        {driver.name ? `${driver.name} (${driver.email})` : driver.email}
+                      </option>
+                    ))}
+                  </select>
                 </label>
               </div>
             </section>

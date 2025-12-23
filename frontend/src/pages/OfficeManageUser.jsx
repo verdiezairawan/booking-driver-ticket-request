@@ -369,7 +369,7 @@ function OfficeManageUser() {
                 </button>
                 <button
                   type="button"
-                  className="btn btn-neutral"
+                  className="btn btn-outline-danger"
                   onClick={() => {
                     setSelectedUser(null)
                     setEditForm(null)
@@ -419,7 +419,7 @@ function OfficeManageUser() {
                   users.map((user) => (
                     <tr
                       key={user.uid}
-                      style={{ background: selectedUser?.uid === user.uid ? '#f5e6f2' : undefined }}
+                      style={{ background: selectedUser?.uid === user.uid ? 'var(--brand-soft)' : undefined }}
                     >
                       <td>{user.name || '-'}</td>
                       <td>{user.dept_job_position || '-'}</td>

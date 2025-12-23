@@ -16,6 +16,7 @@ const menuItems = [
 
 const initialForm = {
   full_name: '',
+  dept_job_position: '',
   phone_number: '',
   email: '',
   national_id: '',
@@ -30,7 +31,6 @@ const initialForm = {
   hotel_location: '',
   transportation_mode: '',
   transportation_other: '',
-  special_requests: '',
   superior_approval_note: '',
   additional_notes: '',
 }
@@ -54,9 +54,14 @@ function OfficeTravelAccommodation() {
   }
 
   const handleChange = (field) => (event) => {
+    const value = event.target.value
     setForm((prev) => ({
       ...prev,
-      [field]: event.target.value,
+      [field]: value,
+      ...(field === 'hotel_accommodation' && value === 'no'
+        ? { hotel_name: '', hotel_location: '' }
+        : null),
+      ...(field === 'transportation_mode' && value !== 'other' ? { transportation_other: '' } : null),
     }))
   }
 
@@ -155,6 +160,16 @@ function OfficeTravelAccommodation() {
                     placeholder="Full name"
                     value={form.full_name}
                     onChange={handleChange('full_name')}
+                    required
+                  />
+                </label>
+                <label className="inline-label">
+                  <span>User Dept/Job Position</span>
+                  <input
+                    type="text"
+                    placeholder="User Dept/Job Position"
+                    value={form.dept_job_position}
+                    onChange={handleChange('dept_job_position')}
                     required
                   />
                 </label>
@@ -287,24 +302,28 @@ function OfficeTravelAccommodation() {
                   </div>
                 </div>
 
-                <label className="inline-label">
-                  <span>Hotel name (optional)</span>
-                  <input
-                    type="text"
-                    placeholder="Hotel name"
-                    value={form.hotel_name}
-                    onChange={handleChange('hotel_name')}
-                  />
-                </label>
-                <label className="inline-label">
-                  <span>Hotel location (optional)</span>
-                  <input
-                    type="text"
-                    placeholder="Hotel location"
-                    value={form.hotel_location}
-                    onChange={handleChange('hotel_location')}
-                  />
-                </label>
+                {form.hotel_accommodation === 'yes' ? (
+                  <>
+                    <label className="inline-label">
+                      <span>Hotel name</span>
+                      <input
+                        type="text"
+                        placeholder="Hotel name"
+                        value={form.hotel_name}
+                        onChange={handleChange('hotel_name')}
+                      />
+                    </label>
+                    <label className="inline-label">
+                      <span>Hotel location</span>
+                      <input
+                        type="text"
+                        placeholder="Hotel location"
+                        value={form.hotel_location}
+                        onChange={handleChange('hotel_location')}
+                      />
+                    </label>
+                  </>
+                ) : null}
 
                 <label className="inline-label">
                   <span>Preferred mode of transportation</span>
@@ -319,24 +338,18 @@ function OfficeTravelAccommodation() {
                     <option value="other">Other</option>
                   </select>
                 </label>
-                <label className="inline-label">
-                  <span>Other transportation (optional)</span>
-                  <input
-                    type="text"
-                    placeholder="If other, write name"
-                    value={form.transportation_other}
-                    onChange={handleChange('transportation_other')}
-                  />
-                </label>
-                <label className="inline-label">
-                  <span>Special requests (optional)</span>
-                  <textarea
-                    placeholder="Special requests"
-                    rows="3"
-                    value={form.special_requests}
-                    onChange={handleChange('special_requests')}
-                  />
-                </label>
+                {form.transportation_mode === 'other' ? (
+                  <label className="inline-label">
+                    <span>Other transportation</span>
+                    <input
+                      type="text"
+                      placeholder="If other, write name"
+                      value={form.transportation_other}
+                      onChange={handleChange('transportation_other')}
+                      required
+                    />
+                  </label>
+                ) : null}
               </div>
             </section>
 

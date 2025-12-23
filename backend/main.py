@@ -28,9 +28,10 @@ def get_current_user(
 ):
     token = creds.credentials
     try:
-        decoded = firebase_auth.verify_id_token(token)
+        decoded = firebase_auth.verify_id_token(token, clock_skew_seconds=60)
         return decoded
-    except Exception:
+    except Exception as exc:
+        print(f"verify_id_token failed: {exc}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid or expired token",

@@ -22,6 +22,8 @@ class BookingCreate(BaseModel):
 
 class BookingAssignCreate(BaseModel):
     requester_name: str = Field(..., min_length=1)
+    requester_dept_job_position: Optional[str] = Field(default=None, min_length=1)
+    requester_nik: Optional[str] = Field(default=None, min_length=1)
     requester_phone: str = Field(..., min_length=1)
     requester_email: str = Field(..., min_length=1)
     driver_email: str = Field(..., min_length=1)
@@ -177,6 +179,8 @@ def assign_driver(payload: BookingAssignCreate, current_user=Depends(get_current
         "driver_id": driver_uid,
         "driver_name": driver_name,
         "requester_name": payload.requester_name,
+        "requester_dept_job_position": payload.requester_dept_job_position,
+        "requester_nik": payload.requester_nik,
         "requester_phone": payload.requester_phone,
         "requester_email": payload.requester_email,
         "pickup_location": payload.pickup_location,
@@ -253,6 +257,67 @@ def update_booking_status(
         updates["driver_id"] = payload.driver_id
 
     doc_ref.update(updates)
+    updated_snapshot = doc_ref.get()
+    return serialize_booking(updated_snapshot)
+
+
+@router.patch("/{booking_id}", response_model=BookingResponse)
+def update_booking(booking_id: str, payload: BookingCreate, current_user=Depends(get_current_user)):
+    uid = current_user["uid"]
+    ensure_role(uid, ("user",))
+
+    doc_ref = db.collection("bookings").document(booking_id)
+    snapshot = doc_ref.get()
+    if not snapshot.exists:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Booking not found")
+
+    data = snapshot.to_dict() or {}
+    if data.get("user_id") != uid:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
+
+    if data.get("status", "pending") != "pending":
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Only pending bookings can be edited")
+
+    doc_ref.update(
+        {
+            "pickup_location": payload.pickup_location,
+            "destination": payload.destination,
+            "trip_type": payload.trip_type,
+            "departure_time": payload.departure_time,
+            "passenger_count": payload.passenger_count,
+            "updated_at": firestore.SERVER_TIMESTAMP,
+        }
+    )
+
+    updated_snapshot = doc_ref.get()
+    return serialize_booking(updated_snapshot)
+
+
+@router.patch("/{booking_id}/cancel", response_model=BookingResponse)
+def cancel_booking(booking_id: str, current_user=Depends(get_current_user)):
+    uid = current_user["uid"]
+    ensure_role(uid, ("user",))
+
+    doc_ref = db.collection("bookings").document(booking_id)
+    snapshot = doc_ref.get()
+    if not snapshot.exists:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Booking not found")
+
+    data = snapshot.to_dict() or {}
+    if data.get("user_id") != uid:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
+
+    if data.get("status", "pending") != "pending":
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Only pending bookings can be canceled")
+
+    doc_ref.update(
+        {
+            "status": "cancelled",
+            "cancelled_by": uid,
+            "updated_at": firestore.SERVER_TIMESTAMP,
+        }
+    )
+
     updated_snapshot = doc_ref.get()
     return serialize_booking(updated_snapshot)
 

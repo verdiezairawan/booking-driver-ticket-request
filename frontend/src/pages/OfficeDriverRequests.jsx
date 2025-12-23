@@ -346,7 +346,7 @@ function OfficeDriverRequests() {
                           </button>
                           <button
                             type="button"
-                            className="btn btn-neutral"
+                            className="btn btn-danger"
                             disabled={processing[booking.id]}
                             onClick={() => handleReject(booking.id)}
                           >
@@ -434,7 +434,7 @@ function OfficeDriverRequests() {
                   </button>
                   <button
                     type="button"
-                    className="btn btn-neutral"
+                    className="btn btn-outline-danger"
                     onClick={closeAssignModal}
                     disabled={processing[assignTarget?.id]}
                   >

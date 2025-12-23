@@ -219,7 +219,13 @@ function OfficeTicketRequests() {
                       <td>{ticket.transportation_mode || '-'}</td>
                       <td>{ticket.superior_approval_note || '-'}</td>
                       <td>{ticket.additional_notes || '-'}</td>
-                      <td>{ticket.status || '-'}</td>
+                      <td>
+                        {ticket.status ? (
+                          <span className={`status-badge status-${String(ticket.status).toLowerCase()}`}>{ticket.status}</span>
+                        ) : (
+                          '-'
+                        )}
+                      </td>
                       <td>
                         <div className="office-row-actions">
                           <button
@@ -232,7 +238,7 @@ function OfficeTicketRequests() {
                           </button>
                           <button
                             type="button"
-                            className="btn btn-neutral"
+                            className="btn btn-danger"
                             disabled={processing[ticket.id]}
                             onClick={() => handleStatusUpdate(ticket.id, 'rejected')}
                           >
