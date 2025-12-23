@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import MainLayout from '../components/MainLayout'
 
@@ -20,11 +20,112 @@ function OfficeDriverHistory() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [page, setPage] = useState(1)
+  const [sortConfig, setSortConfig] = useState({ key: '', direction: 'asc' })
 
   const pageSize = 10
-  const totalPages = Math.max(1, Math.ceil(bookings.length / pageSize))
+
+  const toDate = (value) => {
+    if (!value) return null
+    if (value?.seconds) return new Date(value.seconds * 1000)
+    const dt = new Date(value)
+    return Number.isNaN(dt.getTime()) ? null : dt
+  }
+
+  const getDistanceNumber = (booking) => {
+    const starting = Number(booking?.starting_mileage)
+    const ending = Number(booking?.ending_mileage)
+    if (!Number.isFinite(starting) || !Number.isFinite(ending)) return null
+    if (ending < starting) return null
+    return ending - starting
+  }
+
+  const getBookingSortValue = (booking, key) => {
+    if (!booking) return ''
+    switch (key) {
+      case 'requester_name':
+        return booking.requester_name || ''
+      case 'requester_dept_job_position':
+        return booking.requester_dept_job_position || ''
+      case 'requester_phone':
+        return booking.requester_phone || ''
+      case 'requester_email':
+        return booking.requester_email || ''
+      case 'requester_nik':
+        return booking.requester_nik || ''
+      case 'pickup_location':
+        return booking.pickup_location || ''
+      case 'destination':
+        return booking.destination || ''
+      case 'passenger_count':
+        {
+          const count = Number(booking.passenger_count)
+          return Number.isFinite(count) ? count : null
+        }
+      case 'departure_time':
+        return toDate(booking.departure_time)?.getTime() ?? null
+      case 'trip_type':
+        return booking.trip_type || ''
+      case 'driver':
+        return booking.driver_name || booking.driver_id || ''
+      case 'starting_mileage':
+        {
+          const starting = Number(booking.starting_mileage)
+          return Number.isFinite(starting) ? starting : null
+        }
+      case 'ending_mileage':
+        {
+          const ending = Number(booking.ending_mileage)
+          return Number.isFinite(ending) ? ending : null
+        }
+      case 'total_distance':
+        return getDistanceNumber(booking) ?? null
+      case 'status':
+        return String(booking.status || '').toLowerCase()
+      default:
+        return ''
+    }
+  }
+
+  const compareValues = (aValue, bValue) => {
+    const aEmpty = aValue === null || aValue === undefined || aValue === ''
+    const bEmpty = bValue === null || bValue === undefined || bValue === ''
+
+    if (aEmpty && bEmpty) return 0
+    if (aEmpty) return 1
+    if (bEmpty) return -1
+
+    if (typeof aValue === 'number' && typeof bValue === 'number') {
+      return aValue - bValue
+    }
+
+    return String(aValue).localeCompare(String(bValue), undefined, {
+      numeric: true,
+      sensitivity: 'base',
+    })
+  }
+
+  const sortedBookings = useMemo(() => {
+    if (!sortConfig.key) return bookings
+
+    return bookings
+      .map((booking, index) => ({ booking, index }))
+      .sort((a, b) => {
+        const aValue = getBookingSortValue(a.booking, sortConfig.key)
+        const bValue = getBookingSortValue(b.booking, sortConfig.key)
+        const base = compareValues(aValue, bValue)
+
+        if (base !== 0) {
+          return sortConfig.direction === 'asc' ? base : -base
+        }
+
+        return a.index - b.index
+      })
+      .map((entry) => entry.booking)
+  }, [bookings, sortConfig])
+
+  const totalPages = Math.max(1, Math.ceil(sortedBookings.length / pageSize))
   const currentPage = Math.min(page, totalPages)
-  const pagedBookings = bookings.slice((currentPage - 1) * pageSize, currentPage * pageSize)
+  const pagedBookings = sortedBookings.slice((currentPage - 1) * pageSize, currentPage * pageSize)
 
   useEffect(() => {
     setPage((prev) => Math.min(prev, totalPages))
@@ -82,17 +183,36 @@ function OfficeDriverHistory() {
   }
 
   const formatDate = (value) => {
-    if (!value) return '-'
-    const dt = new Date(value)
-    return Number.isNaN(dt.getTime()) ? '-' : dt.toLocaleDateString('id-ID')
+    const dt = toDate(value)
+    return dt ? dt.toLocaleDateString('id-ID') : '-'
   }
 
   const formatDistance = (booking) => {
-    const starting = Number(booking?.starting_mileage)
-    const ending = Number(booking?.ending_mileage)
-    if (!Number.isFinite(starting) || !Number.isFinite(ending)) return '-'
-    if (ending < starting) return '-'
-    return String(ending - starting)
+    const distance = getDistanceNumber(booking)
+    return distance === null ? '-' : String(distance)
+  }
+
+  const toggleSort = (key) => {
+    setPage(1)
+    setSortConfig((prev) => {
+      if (prev.key === key) {
+        return { key, direction: prev.direction === 'asc' ? 'desc' : 'asc' }
+      }
+      return { key, direction: 'asc' }
+    })
+  }
+
+  const renderSortIcon = (key) => {
+    const isActive = sortConfig.key === key
+    if (!isActive) {
+      return <i className="bi bi-arrow-down-up sort-indicator sort-indicator-muted" aria-hidden="true" />
+    }
+    return (
+      <i
+        className={`bi ${sortConfig.direction === 'asc' ? 'bi-caret-up-fill' : 'bi-caret-down-fill'} sort-indicator`}
+        aria-hidden="true"
+      />
+    )
   }
 
   const escapeHtml = (value) => {
@@ -106,7 +226,7 @@ function OfficeDriverHistory() {
   }
 
   const handleExport = () => {
-    if (!bookings.length) return
+    if (!sortedBookings.length) return
 
     const headers = [
       'Name',
@@ -126,7 +246,7 @@ function OfficeDriverHistory() {
       'Status',
     ]
 
-    const rows = bookings.map((booking) => [
+    const rows = sortedBookings.map((booking) => [
       booking.requester_name || '',
       booking.requester_dept_job_position || '',
       booking.requester_phone || '',
@@ -219,21 +339,85 @@ function OfficeDriverHistory() {
             <table className="office-table">
               <thead>
                 <tr>
-                  <th>Name</th>
-                  <th>User Dept/Job Position</th>
-                  <th>Phone</th>
-                  <th>Email</th>
-                  <th>National ID</th>
-                  <th>Pickup Location</th>
-                  <th>Destination</th>
-                  <th>Passenger Count</th>
-                  <th>Departure Date</th>
-                  <th>Type of Trip</th>
-                  <th>Driver</th>
-                  <th>Starting Mileage</th>
-                  <th>Ending Mileage</th>
-                  <th>Total Distance</th>
-                  <th>Status</th>
+                  <th>
+                    <button type="button" className="table-sort" onClick={() => toggleSort('requester_name')}>
+                      Name {renderSortIcon('requester_name')}
+                    </button>
+                  </th>
+                  <th>
+                    <button
+                      type="button"
+                      className="table-sort"
+                      onClick={() => toggleSort('requester_dept_job_position')}
+                    >
+                      User Dept/Job Position {renderSortIcon('requester_dept_job_position')}
+                    </button>
+                  </th>
+                  <th>
+                    <button type="button" className="table-sort" onClick={() => toggleSort('requester_phone')}>
+                      Phone {renderSortIcon('requester_phone')}
+                    </button>
+                  </th>
+                  <th>
+                    <button type="button" className="table-sort" onClick={() => toggleSort('requester_email')}>
+                      Email {renderSortIcon('requester_email')}
+                    </button>
+                  </th>
+                  <th>
+                    <button type="button" className="table-sort" onClick={() => toggleSort('requester_nik')}>
+                      National ID {renderSortIcon('requester_nik')}
+                    </button>
+                  </th>
+                  <th>
+                    <button type="button" className="table-sort" onClick={() => toggleSort('pickup_location')}>
+                      Pickup Location {renderSortIcon('pickup_location')}
+                    </button>
+                  </th>
+                  <th>
+                    <button type="button" className="table-sort" onClick={() => toggleSort('destination')}>
+                      Destination {renderSortIcon('destination')}
+                    </button>
+                  </th>
+                  <th>
+                    <button type="button" className="table-sort" onClick={() => toggleSort('passenger_count')}>
+                      Passenger Count {renderSortIcon('passenger_count')}
+                    </button>
+                  </th>
+                  <th>
+                    <button type="button" className="table-sort" onClick={() => toggleSort('departure_time')}>
+                      Departure Date {renderSortIcon('departure_time')}
+                    </button>
+                  </th>
+                  <th>
+                    <button type="button" className="table-sort" onClick={() => toggleSort('trip_type')}>
+                      Type of Trip {renderSortIcon('trip_type')}
+                    </button>
+                  </th>
+                  <th>
+                    <button type="button" className="table-sort" onClick={() => toggleSort('driver')}>
+                      Driver {renderSortIcon('driver')}
+                    </button>
+                  </th>
+                  <th>
+                    <button type="button" className="table-sort" onClick={() => toggleSort('starting_mileage')}>
+                      Starting Mileage {renderSortIcon('starting_mileage')}
+                    </button>
+                  </th>
+                  <th>
+                    <button type="button" className="table-sort" onClick={() => toggleSort('ending_mileage')}>
+                      Ending Mileage {renderSortIcon('ending_mileage')}
+                    </button>
+                  </th>
+                  <th>
+                    <button type="button" className="table-sort" onClick={() => toggleSort('total_distance')}>
+                      Total Distance {renderSortIcon('total_distance')}
+                    </button>
+                  </th>
+                  <th>
+                    <button type="button" className="table-sort" onClick={() => toggleSort('status')}>
+                      Status {renderSortIcon('status')}
+                    </button>
+                  </th>
                 </tr>
               </thead>
               <tbody>

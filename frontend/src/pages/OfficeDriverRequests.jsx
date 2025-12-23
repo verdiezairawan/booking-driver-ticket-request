@@ -312,62 +312,70 @@ function OfficeDriverRequests() {
                   <th>Passenger Count</th>
                   <th>Departure Date</th>
                   <th>Type of Trip</th>
+                  <th>Status</th>
                   <th>Action</th>
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan="10" className="muted">
+                    <td colSpan="11" className="muted">
                       Loading...
                     </td>
                   </tr>
                 ) : error ? (
                   <tr>
-                    <td colSpan="10" className="error-text">
+                    <td colSpan="11" className="error-text">
                       {error}
                     </td>
                   </tr>
                 ) : bookings.length === 0 ? (
                   <tr>
-                    <td colSpan="10" className="muted">
+                    <td colSpan="11" className="muted">
                       No driver requests found.
                     </td>
                   </tr>
                 ) : (
-                  pagedBookings.map((booking) => (
-                    <tr key={booking.id}>
-                      <td>{booking.requester_name || '-'}</td>
-                      <td>{booking.requester_phone || '-'}</td>
-                      <td>{booking.requester_email || '-'}</td>
-                      <td>{booking.requester_nik || '-'}</td>
-                      <td>{booking.pickup_location || '-'}</td>
-                      <td>{booking.destination || '-'}</td>
-                      <td>{booking.passenger_count ?? '-'}</td>
-                      <td>{formatDate(booking.departure_time)}</td>
-                      <td>{booking.trip_type || '-'}</td>
-                      <td>
-                        <div className="office-row-actions">
-                          <button
-                            type="button"
-                            className="btn btn-primary"
-                            disabled={processing[booking.id]}
-                            onClick={() => openAssignModal(booking)}
-                          >
-                            Assign Driver
-                          </button>
-                          <button
-                            type="button"
-                            className="btn btn-danger"
-                            disabled={processing[booking.id]}
-                            onClick={() => handleReject(booking.id)}
-                          >
-                            Reject
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
+                  pagedBookings.map((booking) => {
+                    const statusValue = String(booking.status || 'pending').toLowerCase()
+
+                    return (
+                      <tr key={booking.id}>
+                        <td>{booking.requester_name || '-'}</td>
+                        <td>{booking.requester_phone || '-'}</td>
+                        <td>{booking.requester_email || '-'}</td>
+                        <td>{booking.requester_nik || '-'}</td>
+                        <td>{booking.pickup_location || '-'}</td>
+                        <td>{booking.destination || '-'}</td>
+                        <td>{booking.passenger_count ?? '-'}</td>
+                        <td>{formatDate(booking.departure_time)}</td>
+                        <td>{booking.trip_type || '-'}</td>
+                        <td>
+                          <span className={`status-badge status-${statusValue}`}>{booking.status || 'pending'}</span>
+                        </td>
+                        <td>
+                          <div className="office-row-actions">
+                            <button
+                              type="button"
+                              className="btn btn-primary"
+                              disabled={processing[booking.id]}
+                              onClick={() => openAssignModal(booking)}
+                            >
+                              Assign Driver
+                            </button>
+                            <button
+                              type="button"
+                              className="btn btn-danger"
+                              disabled={processing[booking.id]}
+                              onClick={() => handleReject(booking.id)}
+                            >
+                              Reject
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  })
                 )}
               </tbody>
             </table>
