@@ -19,6 +19,16 @@ function OfficeTicketHistory() {
   const [tickets, setTickets] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [page, setPage] = useState(1)
+
+  const pageSize = 10
+  const totalPages = Math.max(1, Math.ceil(tickets.length / pageSize))
+  const currentPage = Math.min(page, totalPages)
+  const pagedTickets = tickets.slice((currentPage - 1) * pageSize, currentPage * pageSize)
+
+  useEffect(() => {
+    setPage((prev) => Math.min(prev, totalPages))
+  }, [totalPages])
 
   useEffect(() => {
     const token = localStorage.getItem('authToken')
@@ -66,6 +76,91 @@ function OfficeTicketHistory() {
     return Number.isNaN(dt.getTime()) ? '-' : dt.toLocaleDateString('id-ID')
   }
 
+  const escapeHtml = (value) => {
+    if (value === null || value === undefined) return ''
+    return String(value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;')
+  }
+
+  const handleExport = () => {
+    if (!tickets.length) return
+
+    const headers = [
+      'Name',
+      'User Dept/Job Position',
+      'Phone',
+      'Email',
+      'National ID',
+      'Departure Date',
+      'Departure Time',
+      'Departure Point',
+      'Destination',
+      'Purpose of Travel',
+      'Type of Trip',
+      'Hotel Accommodation',
+      'Hotel Name',
+      'Hotel Location',
+      'Transport Mode',
+      'Attachment',
+      'Notes',
+      'Status',
+    ]
+
+    const rows = tickets.map((ticket) => [
+      ticket.full_name || '',
+      ticket.dept_job_position || '',
+      ticket.phone_number || '',
+      ticket.email || '',
+      ticket.national_id || '',
+      formatDate(ticket.departure_date),
+      ticket.departure_time || '',
+      ticket.departure_point || '',
+      ticket.destination || '',
+      ticket.purpose_of_travel || '',
+      ticket.trip_type || '',
+      ticket.hotel_accommodation ? 'Yes' : 'No',
+      ticket.hotel_name || '',
+      ticket.hotel_location || '',
+      ticket.transportation_mode || '',
+      ticket.superior_approval_note || '',
+      ticket.additional_notes || '',
+      ticket.status || '',
+    ])
+
+    const headerHtml = `<tr>${headers.map((header) => `<th>${escapeHtml(header)}</th>`).join('')}</tr>`
+    const bodyHtml = rows
+      .map((row) => `<tr>${row.map((cell) => `<td>${escapeHtml(cell)}</td>`).join('')}</tr>`)
+      .join('')
+
+    const html = `<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+  </head>
+  <body>
+    <table border="1">
+      <thead>${headerHtml}</thead>
+      <tbody>${bodyHtml}</tbody>
+    </table>
+  </body>
+</html>`
+
+    const blob = new Blob([html], { type: 'application/vnd.ms-excel;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `ticket_history_${new Date().toISOString().slice(0, 10)}.xls`
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    URL.revokeObjectURL(url)
+  }
+
   const handleNavigate = (item) => {
     if (item === 'Dashboard') navigate('/office/home')
     if (item === 'Ticket Requests') navigate('/office/ticket-requests')
@@ -105,11 +200,25 @@ function OfficeTicketHistory() {
             <p className="muted">All processed ticket requests (non-pending)</p>
           </header>
 
+          <div className="form-actions">
+            <button
+              type="button"
+              className="btn btn-outline-brand"
+              onClick={handleExport}
+              disabled={loading || !tickets.length}
+              title={tickets.length ? 'Export to Excel (.xls)' : 'No data to export'}
+            >
+              <i className="bi bi-file-earmark-excel" />
+              Export Excel
+            </button>
+          </div>
+
           <div className="office-table-wrapper">
             <table className="office-table">
               <thead>
                 <tr>
                   <th>Name</th>
+                  <th>User Dept/Job Position</th>
                   <th>Phone</th>
                   <th>Email</th>
                   <th>National ID</th>
@@ -131,26 +240,27 @@ function OfficeTicketHistory() {
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan="17" className="muted">
+                    <td colSpan="18" className="muted">
                       Loading...
                     </td>
                   </tr>
                 ) : error ? (
                   <tr>
-                    <td colSpan="17" className="error-text">
+                    <td colSpan="18" className="error-text">
                       {error}
                     </td>
                   </tr>
                 ) : tickets.length === 0 ? (
                   <tr>
-                    <td colSpan="17" className="muted">
+                    <td colSpan="18" className="muted">
                       No ticket history found.
                     </td>
                   </tr>
                 ) : (
-                  tickets.map((ticket) => (
+                  pagedTickets.map((ticket) => (
                     <tr key={ticket.id}>
                       <td>{ticket.full_name || '-'}</td>
+                      <td>{ticket.dept_job_position || '-'}</td>
                       <td>{ticket.phone_number || '-'}</td>
                       <td>{ticket.email || '-'}</td>
                       <td>{ticket.national_id || '-'}</td>
@@ -180,11 +290,23 @@ function OfficeTicketHistory() {
             </table>
           </div>
           <div className="office-pagination">
-            <button type="button" className="btn btn-neutral" disabled>
+            <button
+              type="button"
+              className="btn btn-neutral"
+              disabled={loading || currentPage <= 1 || tickets.length === 0}
+              onClick={() => setPage((prev) => Math.max(1, Math.min(prev, totalPages) - 1))}
+            >
               Prev
             </button>
-            <span className="office-page-info">Page 1 of 1</span>
-            <button type="button" className="btn btn-neutral" disabled>
+            <span className="office-page-info">
+              Page {currentPage} of {totalPages}
+            </span>
+            <button
+              type="button"
+              className="btn btn-neutral"
+              disabled={loading || currentPage >= totalPages || tickets.length === 0}
+              onClick={() => setPage((prev) => Math.min(totalPages, Math.min(prev, totalPages) + 1))}
+            >
               Next
             </button>
           </div>

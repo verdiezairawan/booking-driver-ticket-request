@@ -4,12 +4,14 @@
   --brand-soft: #e7ebff;
   --brand-danger: #ec242c;
   --brand-danger-soft: #ffe5e7;
+  --page-padding: 24px;
 }
 
 .app-shell {
   min-height: 100vh;
   background-color: #f4f6f8;
   color: #111827;
+  overflow-x: hidden;
 }
 
 .layout {
@@ -62,7 +64,7 @@
 
 .layout__content {
   flex: 1;
-  padding: 24px;
+  padding: var(--page-padding);
 }
 
 .content-placeholder,
@@ -905,6 +907,22 @@
   white-space: nowrap;
 }
 
+/* Ticket & booking history */
+.ticket-history {
+  max-width: 1100px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.history-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
 @media (max-width: 768px) {
   .ticket-request-page {
     padding: 0;
@@ -922,12 +940,13 @@
   min-height: 70vh;
   gap: 24px;
   transition: grid-template-columns 0.2s ease;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: visible;
 }
 
 .office-dashboard.fixed-sidebar {
-  margin-left: -24px;
-  margin-top: -24px;
+  margin-left: calc(-1 * var(--page-padding));
+  margin-top: calc(-1 * var(--page-padding));
 }
 
 .office-sidebar {
@@ -1236,4 +1255,162 @@
 
 .success-modal-actions .btn {
   min-width: 170px;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  :root {
+    --page-padding: 20px;
+  }
+
+  .login-wrapper {
+    gap: 32px;
+  }
+
+  .login-logo__circle {
+    width: 240px;
+    height: 240px;
+    font-size: 24px;
+  }
+
+  .office-dashboard {
+    grid-template-columns: 210px 1fr;
+    gap: 18px;
+  }
+
+  .office-content {
+    padding: 18px;
+  }
+}
+
+@media (max-width: 768px) {
+  :root {
+    --page-padding: 16px;
+  }
+
+  .navbar {
+    padding: 12px 16px;
+  }
+
+  .logout-button {
+    padding: 8px 12px;
+  }
+
+  .login-page {
+    padding: 20px;
+  }
+
+  .login-wrapper {
+    grid-template-columns: 1fr;
+    justify-items: center;
+    gap: 24px;
+  }
+
+  .login-logo__circle {
+    width: 220px;
+    height: 220px;
+    font-size: 22px;
+  }
+
+  .login-card {
+    max-width: 520px;
+  }
+
+  .driver-meta {
+    grid-template-columns: 1fr;
+  }
+
+  .office-dashboard {
+    grid-template-columns: 190px 1fr;
+    gap: 16px;
+  }
+
+  .office-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .office-pagination {
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .modal-overlay {
+    padding: 16px;
+  }
+
+  .modal {
+    max-height: calc(100vh - 32px);
+    overflow-y: auto;
+  }
+
+  .success-modal-title {
+    font-size: 28px;
+  }
+
+  .success-modal-actions .btn {
+    min-width: 150px;
+  }
+}
+
+@media (max-width: 640px) {
+  :root {
+    --page-padding: 12px;
+  }
+
+  .navbar {
+    padding: 10px 12px;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .layout__content {
+    padding: var(--page-padding);
+  }
+
+  .login-logo__circle {
+    width: 180px;
+    height: 180px;
+    font-size: 18px;
+  }
+
+  .login-card {
+    padding: 24px;
+  }
+
+  .form-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .form-actions .btn {
+    width: 100%;
+  }
+
+  .office-dashboard {
+    grid-template-columns: 1fr;
+  }
+
+  .office-sidebar {
+    position: relative;
+    top: auto;
+    min-height: auto;
+    border-right: 0;
+    border-bottom: 2px solid var(--brand-nav);
+  }
+
+  .office-content {
+    padding: 16px;
+  }
+
+  .office-table th,
+  .office-table td {
+    padding: 8px 10px;
+    font-size: 13px;
+  }
+
+  .simple-table th,
+  .simple-table td {
+    padding: 10px 12px;
+    font-size: 13px;
+  }
 }

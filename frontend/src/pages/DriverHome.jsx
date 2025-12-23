@@ -22,6 +22,22 @@ function DriverHome() {
   const [endingMileage, setEndingMileage] = useState('')
   const [completionProof, setCompletionProof] = useState('')
 
+  const completedDistance = useMemo(() => {
+    const startingValue = Number(activeBooking?.starting_mileage)
+    const endingValue = Number(endingMileage)
+    if (!Number.isFinite(startingValue) || !Number.isFinite(endingValue)) return ''
+    if (endingValue < startingValue) return ''
+    return String(endingValue - startingValue)
+  }, [activeBooking?.starting_mileage, endingMileage])
+
+  const distanceInvalid = useMemo(() => {
+    if (!endingMileage) return false
+    const startingValue = Number(activeBooking?.starting_mileage)
+    const endingValue = Number(endingMileage)
+    if (!Number.isFinite(startingValue) || !Number.isFinite(endingValue)) return false
+    return endingValue < startingValue
+  }, [activeBooking?.starting_mileage, endingMileage])
+
   useEffect(() => {
     const token = localStorage.getItem('authToken')
     if (!token) {
@@ -453,6 +469,15 @@ function DriverHome() {
                     required
                   />
                 </label>
+                <label className="inline-label">
+                  <span>Total distance (auto)</span>
+                  <input type="number" placeholder="Auto calculated" value={completedDistance} disabled readOnly />
+                </label>
+                {distanceInvalid ? (
+                  <p className="error-text" style={{ gridColumn: '1 / -1' }}>
+                    Ending mileage must be greater than or equal to starting mileage.
+                  </p>
+                ) : null}
                 <label className="inline-label">
                   <span>Proof of completion (text)</span>
                   <input

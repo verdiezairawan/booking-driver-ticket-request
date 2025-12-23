@@ -19,6 +19,16 @@ function OfficeDriverHistory() {
   const [bookings, setBookings] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [page, setPage] = useState(1)
+
+  const pageSize = 10
+  const totalPages = Math.max(1, Math.ceil(bookings.length / pageSize))
+  const currentPage = Math.min(page, totalPages)
+  const pagedBookings = bookings.slice((currentPage - 1) * pageSize, currentPage * pageSize)
+
+  useEffect(() => {
+    setPage((prev) => Math.min(prev, totalPages))
+  }, [totalPages])
 
   useEffect(() => {
     const token = localStorage.getItem('authToken')
@@ -77,6 +87,93 @@ function OfficeDriverHistory() {
     return Number.isNaN(dt.getTime()) ? '-' : dt.toLocaleDateString('id-ID')
   }
 
+  const formatDistance = (booking) => {
+    const starting = Number(booking?.starting_mileage)
+    const ending = Number(booking?.ending_mileage)
+    if (!Number.isFinite(starting) || !Number.isFinite(ending)) return '-'
+    if (ending < starting) return '-'
+    return String(ending - starting)
+  }
+
+  const escapeHtml = (value) => {
+    if (value === null || value === undefined) return ''
+    return String(value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;')
+  }
+
+  const handleExport = () => {
+    if (!bookings.length) return
+
+    const headers = [
+      'Name',
+      'User Dept/Job Position',
+      'Phone',
+      'Email',
+      'National ID',
+      'Pickup Location',
+      'Destination',
+      'Passenger Count',
+      'Departure Date',
+      'Type of Trip',
+      'Driver',
+      'Starting Mileage',
+      'Ending Mileage',
+      'Total Distance',
+      'Status',
+    ]
+
+    const rows = bookings.map((booking) => [
+      booking.requester_name || '',
+      booking.requester_dept_job_position || '',
+      booking.requester_phone || '',
+      booking.requester_email || '',
+      booking.requester_nik || '',
+      booking.pickup_location || '',
+      booking.destination || '',
+      booking.passenger_count ?? '',
+      formatDate(booking.departure_time),
+      booking.trip_type || '',
+      booking.driver_name || booking.driver_id || '',
+      booking.starting_mileage ?? '',
+      booking.ending_mileage ?? '',
+      formatDistance(booking),
+      booking.status || '',
+    ])
+
+    const headerHtml = `<tr>${headers.map((header) => `<th>${escapeHtml(header)}</th>`).join('')}</tr>`
+    const bodyHtml = rows
+      .map((row) => `<tr>${row.map((cell) => `<td>${escapeHtml(cell)}</td>`).join('')}</tr>`)
+      .join('')
+
+    const html = `<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+  </head>
+  <body>
+    <table border="1">
+      <thead>${headerHtml}</thead>
+      <tbody>${bodyHtml}</tbody>
+    </table>
+  </body>
+</html>`
+
+    const blob = new Blob([html], { type: 'application/vnd.ms-excel;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `driver_history_${new Date().toISOString().slice(0, 10)}.xls`
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    URL.revokeObjectURL(url)
+  }
+
   return (
     <MainLayout title="">
       <div className="office-dashboard fixed-sidebar">
@@ -105,53 +202,76 @@ function OfficeDriverHistory() {
             <p className="muted">All processed driver requests (non-pending)</p>
           </header>
 
+          <div className="form-actions">
+            <button
+              type="button"
+              className="btn btn-outline-brand"
+              onClick={handleExport}
+              disabled={loading || !bookings.length}
+              title={bookings.length ? 'Export to Excel (.xls)' : 'No data to export'}
+            >
+              <i className="bi bi-file-earmark-excel" />
+              Export Excel
+            </button>
+          </div>
+
           <div className="office-table-wrapper">
             <table className="office-table">
               <thead>
                 <tr>
                   <th>Name</th>
+                  <th>User Dept/Job Position</th>
                   <th>Phone</th>
                   <th>Email</th>
+                  <th>National ID</th>
                   <th>Pickup Location</th>
                   <th>Destination</th>
                   <th>Passenger Count</th>
                   <th>Departure Date</th>
                   <th>Type of Trip</th>
                   <th>Driver</th>
+                  <th>Starting Mileage</th>
+                  <th>Ending Mileage</th>
+                  <th>Total Distance</th>
                   <th>Status</th>
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan="10" className="muted">
+                    <td colSpan="15" className="muted">
                       Loading...
                     </td>
                   </tr>
                 ) : error ? (
                   <tr>
-                    <td colSpan="10" className="error-text">
+                    <td colSpan="15" className="error-text">
                       {error}
                     </td>
                   </tr>
                 ) : bookings.length === 0 ? (
                   <tr>
-                    <td colSpan="10" className="muted">
+                    <td colSpan="15" className="muted">
                       No driver history found.
                     </td>
                   </tr>
                 ) : (
-                  bookings.map((booking) => (
+                  pagedBookings.map((booking) => (
                     <tr key={booking.id}>
                       <td>{booking.requester_name || '-'}</td>
+                      <td>{booking.requester_dept_job_position || '-'}</td>
                       <td>{booking.requester_phone || '-'}</td>
                       <td>{booking.requester_email || '-'}</td>
+                      <td>{booking.requester_nik || '-'}</td>
                       <td>{booking.pickup_location || '-'}</td>
                       <td>{booking.destination || '-'}</td>
                       <td>{booking.passenger_count ?? '-'}</td>
                       <td>{formatDate(booking.departure_time)}</td>
                       <td>{booking.trip_type || '-'}</td>
                       <td>{booking.driver_name || booking.driver_id || '-'}</td>
+                      <td>{booking.starting_mileage ?? '-'}</td>
+                      <td>{booking.ending_mileage ?? '-'}</td>
+                      <td>{formatDistance(booking)}</td>
                       <td>
                         {booking.status ? (
                           <span className={`status-badge status-${String(booking.status).toLowerCase()}`}>
@@ -169,11 +289,23 @@ function OfficeDriverHistory() {
           </div>
 
           <div className="office-pagination">
-            <button type="button" className="btn btn-neutral" disabled>
+            <button
+              type="button"
+              className="btn btn-neutral"
+              disabled={loading || currentPage <= 1 || bookings.length === 0}
+              onClick={() => setPage((prev) => Math.max(1, Math.min(prev, totalPages) - 1))}
+            >
               Prev
             </button>
-            <span className="office-page-info">Page 1 of 1</span>
-            <button type="button" className="btn btn-neutral" disabled>
+            <span className="office-page-info">
+              Page {currentPage} of {totalPages}
+            </span>
+            <button
+              type="button"
+              className="btn btn-neutral"
+              disabled={loading || currentPage >= totalPages || bookings.length === 0}
+              onClick={() => setPage((prev) => Math.min(totalPages, Math.min(prev, totalPages) + 1))}
+            >
               Next
             </button>
           </div>

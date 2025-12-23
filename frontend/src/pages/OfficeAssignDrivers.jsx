@@ -35,6 +35,7 @@ function OfficeAssignDrivers() {
   const [loading, setLoading] = useState(false)
   const [successMessage, setSuccessMessage] = useState('')
   const [errorMessage, setErrorMessage] = useState('')
+  const [showSuccessModal, setShowSuccessModal] = useState(false)
   const [drivers, setDrivers] = useState([])
   const [driversLoading, setDriversLoading] = useState(false)
   const [driversError, setDriversError] = useState('')
@@ -105,6 +106,7 @@ function OfficeAssignDrivers() {
     setLoading(true)
     setSuccessMessage('')
     setErrorMessage('')
+    setShowSuccessModal(false)
 
     if (!form.departure_date || !form.departure_time) {
       setErrorMessage('Departure date and time are required.')
@@ -162,6 +164,7 @@ function OfficeAssignDrivers() {
       } else {
         setSuccessMessage('Driver assigned successfully (approved).')
         setForm(initialForm)
+        setShowSuccessModal(true)
       }
     } catch (error) {
       setErrorMessage('Network error. Please try again.')
@@ -367,6 +370,37 @@ function OfficeAssignDrivers() {
               </button>
             </div>
           </form>
+
+          {showSuccessModal ? (
+            <div className="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="assign-success-title">
+              <div className="modal success-modal">
+                <div className="success-modal-icon" aria-hidden="true">
+                  <i className="bi bi-check-lg" />
+                </div>
+                <h2 id="assign-success-title" className="success-modal-title">
+                  Assignment Saved
+                </h2>
+                <p className="success-modal-message">
+                  Driver assignment was saved successfully. It will appear in driver history.
+                </p>
+                <div className="success-modal-actions">
+                  <button
+                    type="button"
+                    className="btn btn-brand"
+                    onClick={() => {
+                      setShowSuccessModal(false)
+                      navigate('/office/driver-history')
+                    }}
+                  >
+                    View History
+                  </button>
+                  <button type="button" className="btn btn-outline-brand" onClick={() => setShowSuccessModal(false)}>
+                    Back to Form
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : null}
         </section>
       </div>
     </MainLayout>

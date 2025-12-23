@@ -29,18 +29,31 @@ function OfficeManageUser() {
   const [users, setUsers] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [actionLoadingId, setActionLoadingId] = useState('')
+  const [actionError, setActionError] = useState('')
+  const [actionSuccess, setActionSuccess] = useState('')
+  const [page, setPage] = useState(1)
 
   const [showCreate, setShowCreate] = useState(false)
   const [createForm, setCreateForm] = useState(initialCreate)
   const [createLoading, setCreateLoading] = useState(false)
   const [createError, setCreateError] = useState('')
-  const [createSuccess, setCreateSuccess] = useState('')
 
   const [selectedUser, setSelectedUser] = useState(null)
   const [editForm, setEditForm] = useState(null)
   const [editLoading, setEditLoading] = useState(false)
   const [editError, setEditError] = useState('')
-  const [editSuccess, setEditSuccess] = useState('')
+
+  const [successModal, setSuccessModal] = useState(null)
+
+  const pageSize = 10
+  const totalPages = Math.max(1, Math.ceil(users.length / pageSize))
+  const currentPage = Math.min(page, totalPages)
+  const pagedUsers = users.slice((currentPage - 1) * pageSize, currentPage * pageSize)
+
+  useEffect(() => {
+    setPage((prev) => Math.min(prev, totalPages))
+  }, [totalPages])
 
   const token = localStorage.getItem('authToken')
 
@@ -114,7 +127,6 @@ function OfficeManageUser() {
       email: user.email || '',
     })
     setEditError('')
-    setEditSuccess('')
   }
 
   const handleCreate = async (event) => {
@@ -123,7 +135,7 @@ function OfficeManageUser() {
 
     setCreateLoading(true)
     setCreateError('')
-    setCreateSuccess('')
+    setSuccessModal(null)
 
     try {
       const res = await fetch('http://localhost:8000/users', {
@@ -144,7 +156,11 @@ function OfficeManageUser() {
         }
         setCreateError(detail)
       } else {
-        setCreateSuccess('User account created successfully.')
+        setSuccessModal({
+          mode: 'create',
+          title: 'Account Created',
+          message: 'User account was created successfully.',
+        })
         setCreateForm(initialCreate)
         setShowCreate(false)
         await loadUsers()
@@ -162,7 +178,7 @@ function OfficeManageUser() {
 
     setEditLoading(true)
     setEditError('')
-    setEditSuccess('')
+    setSuccessModal(null)
 
     try {
       const res = await fetch(`http://localhost:8000/users/${selectedUser.uid}`, {
@@ -183,13 +199,54 @@ function OfficeManageUser() {
         }
         setEditError(detail)
       } else {
-        setEditSuccess('User updated successfully.')
+        setSuccessModal({
+          mode: 'update',
+          title: 'Changes Saved',
+          message: 'User profile was updated successfully.',
+        })
         await loadUsers()
       }
     } catch (err) {
       setEditError('Network error. Please try again.')
     } finally {
       setEditLoading(false)
+    }
+  }
+
+  const handleDeactivate = async (user) => {
+    if (!token || !user?.uid) return
+
+    const confirmed = window.confirm(`Deactivate this account?\n\n${user.email || user.name || user.uid}`)
+    if (!confirmed) return
+
+    setActionLoadingId(user.uid)
+    setActionError('')
+    setActionSuccess('')
+
+    try {
+      const res = await fetch(`http://localhost:8000/users/${user.uid}/deactivate`, {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${token}` },
+      })
+
+      if (!res.ok) {
+        let detail = 'Failed to deactivate user.'
+        try {
+          const data = await res.json()
+          if (data?.detail) detail = data.detail
+        } catch {
+          // ignore parse error
+        }
+        setActionError(detail)
+        return
+      }
+
+      setActionSuccess('User deactivated successfully.')
+      await loadUsers()
+    } catch (err) {
+      setActionError('Network error. Please try again.')
+    } finally {
+      setActionLoadingId('')
     }
   }
 
@@ -220,6 +277,9 @@ function OfficeManageUser() {
             <h1>Manage Users</h1>
             <p className="muted">Create new accounts and update existing user profiles</p>
           </header>
+
+          {actionSuccess ? <p className="success-text">{actionSuccess}</p> : null}
+          {actionError ? <p className="error-text">{actionError}</p> : null}
 
           <div className="form-actions">
             <button type="button" className="btn btn-primary" onClick={() => setShowCreate((v) => !v)}>
@@ -296,7 +356,6 @@ function OfficeManageUser() {
                 </div>
               </section>
 
-              {createSuccess ? <p className="success-text">{createSuccess}</p> : null}
               {createError ? <p className="error-text">{createError}</p> : null}
 
               <div className="form-actions">
@@ -360,7 +419,6 @@ function OfficeManageUser() {
                 </div>
               </section>
 
-              {editSuccess ? <p className="success-text">{editSuccess}</p> : null}
               {editError ? <p className="error-text">{editError}</p> : null}
 
               <div className="form-actions">
@@ -374,7 +432,7 @@ function OfficeManageUser() {
                     setSelectedUser(null)
                     setEditForm(null)
                     setEditError('')
-                    setEditSuccess('')
+                    setSuccessModal(null)
                   }}
                 >
                   Cancel
@@ -416,7 +474,7 @@ function OfficeManageUser() {
                     </td>
                   </tr>
                 ) : (
-                  users.map((user) => (
+                  pagedUsers.map((user) => (
                     <tr
                       key={user.uid}
                       style={{ background: selectedUser?.uid === user.uid ? 'var(--brand-soft)' : undefined }}
@@ -428,15 +486,28 @@ function OfficeManageUser() {
                       <td>{user.phone || '-'}</td>
                       <td>{user.email || '-'}</td>
                       <td>
-                        <button
-                          type="button"
-                          className="btn btn-primary"
-                          onClick={(event) => {
-                            handleSelectUser(user)
-                          }}
-                        >
-                          Update
-                        </button>
+                        <div className="office-row-actions">
+                          <button
+                            type="button"
+                            className="btn btn-primary"
+                            disabled={actionLoadingId === user.uid || user.disabled}
+                            onClick={() => handleSelectUser(user)}
+                          >
+                            Update
+                          </button>
+                          {!user.disabled ? (
+                            <button
+                              type="button"
+                              className="btn btn-danger"
+                              disabled={actionLoadingId === user.uid}
+                              onClick={() => handleDeactivate(user)}
+                            >
+                              {actionLoadingId === user.uid ? 'Deactivating...' : 'Deactivate'}
+                            </button>
+                          ) : (
+                            <span className="status-badge status-cancelled">Deactivated</span>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))
@@ -444,6 +515,79 @@ function OfficeManageUser() {
               </tbody>
             </table>
           </div>
+
+          <div className="office-pagination">
+            <button
+              type="button"
+              className="btn btn-neutral"
+              disabled={loading || currentPage <= 1 || users.length === 0}
+              onClick={() => setPage((prev) => Math.max(1, Math.min(prev, totalPages) - 1))}
+            >
+              Prev
+            </button>
+            <span className="office-page-info">
+              Page {currentPage} of {totalPages}
+            </span>
+            <button
+              type="button"
+              className="btn btn-neutral"
+              disabled={loading || currentPage >= totalPages || users.length === 0}
+              onClick={() => setPage((prev) => Math.min(totalPages, Math.min(prev, totalPages) + 1))}
+            >
+              Next
+            </button>
+          </div>
+
+          {successModal ? (
+            <div className="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="user-success-title">
+              <div className="modal success-modal">
+                <div className="success-modal-icon" aria-hidden="true">
+                  <i className="bi bi-check-lg" />
+                </div>
+                <h2 id="user-success-title" className="success-modal-title">
+                  {successModal.title}
+                </h2>
+                <p className="success-modal-message">{successModal.message}</p>
+                <div className="success-modal-actions">
+                  {successModal.mode === 'create' ? (
+                    <>
+                      <button
+                        type="button"
+                        className="btn btn-brand"
+                        onClick={() => {
+                          setSuccessModal(null)
+                          setShowCreate(true)
+                        }}
+                      >
+                        Create Another
+                      </button>
+                      <button type="button" className="btn btn-outline-brand" onClick={() => setSuccessModal(null)}>
+                        Back to List
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button type="button" className="btn btn-brand" onClick={() => setSuccessModal(null)}>
+                        OK
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-outline-brand"
+                        onClick={() => {
+                          setSuccessModal(null)
+                          setSelectedUser(null)
+                          setEditForm(null)
+                          setEditError('')
+                        }}
+                      >
+                        Close Editor
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+          ) : null}
         </section>
       </div>
     </MainLayout>

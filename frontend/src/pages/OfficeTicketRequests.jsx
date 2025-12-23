@@ -22,6 +22,16 @@ function OfficeTicketRequests() {
   const [actionMessage, setActionMessage] = useState('')
   const [actionError, setActionError] = useState('')
   const [processing, setProcessing] = useState({})
+  const [page, setPage] = useState(1)
+
+  const pageSize = 10
+  const totalPages = Math.max(1, Math.ceil(tickets.length / pageSize))
+  const currentPage = Math.min(page, totalPages)
+  const pagedTickets = tickets.slice((currentPage - 1) * pageSize, currentPage * pageSize)
+
+  useEffect(() => {
+    setPage((prev) => Math.min(prev, totalPages))
+  }, [totalPages])
 
   useEffect(() => {
     const token = localStorage.getItem('authToken')
@@ -201,7 +211,7 @@ function OfficeTicketRequests() {
                     </td>
                   </tr>
                 ) : (
-                  tickets.map((ticket) => (
+                  pagedTickets.map((ticket) => (
                     <tr key={ticket.id}>
                       <td>{ticket.full_name || '-'}</td>
                       <td>{ticket.phone_number || '-'}</td>
@@ -253,11 +263,23 @@ function OfficeTicketRequests() {
             </table>
           </div>
           <div className="office-pagination">
-            <button type="button" className="btn btn-neutral" disabled>
+            <button
+              type="button"
+              className="btn btn-neutral"
+              disabled={loading || currentPage <= 1 || tickets.length === 0}
+              onClick={() => setPage((prev) => Math.max(1, Math.min(prev, totalPages) - 1))}
+            >
               Prev
             </button>
-            <span className="office-page-info">Page 1 of 1</span>
-            <button type="button" className="btn btn-neutral" disabled>
+            <span className="office-page-info">
+              Page {currentPage} of {totalPages}
+            </span>
+            <button
+              type="button"
+              className="btn btn-neutral"
+              disabled={loading || currentPage >= totalPages || tickets.length === 0}
+              onClick={() => setPage((prev) => Math.min(totalPages, Math.min(prev, totalPages) + 1))}
+            >
               Next
             </button>
           </div>

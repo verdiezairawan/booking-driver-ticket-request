@@ -9,6 +9,16 @@ function BookingHistory() {
   const [error, setError] = useState('')
   const [actionError, setActionError] = useState('')
   const [actionLoadingId, setActionLoadingId] = useState('')
+  const [page, setPage] = useState(1)
+
+  const pageSize = 10
+  const totalPages = Math.max(1, Math.ceil(bookings.length / pageSize))
+  const currentPage = Math.min(page, totalPages)
+  const pagedBookings = bookings.slice((currentPage - 1) * pageSize, currentPage * pageSize)
+
+  useEffect(() => {
+    setPage((prev) => Math.min(prev, totalPages))
+  }, [totalPages])
 
   useEffect(() => {
     const fetchBookings = async () => {
@@ -134,72 +144,96 @@ function BookingHistory() {
         {actionError ? <p className="error-text">{actionError}</p> : null}
 
         {!loading && !error ? (
-          <div className="table-wrapper">
-            <table className="simple-table">
-              <thead>
-                <tr>
-                  <th>Submission Date</th>
-                  <th>Pickup Location</th>
-                  <th>Destination</th>
-                  <th>Trip Type</th>
-                  <th>Departure</th>
-                  <th>Status</th>
-                  <th>Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {bookings.length === 0 ? (
+          <>
+            <div className="table-wrapper">
+              <table className="simple-table">
+                <thead>
                   <tr>
-                    <td colSpan="7" className="muted">
-                      Belum ada booking driver.
-                    </td>
+                    <th>Submission Date</th>
+                    <th>Pickup Location</th>
+                    <th>Destination</th>
+                    <th>Trip Type</th>
+                    <th>Departure</th>
+                    <th>Status</th>
+                    <th>Action</th>
                   </tr>
-                ) : (
-                  bookings.map((booking) => {
-                    const statusValue = (booking.status || 'pending').toLowerCase()
-                    const isPending = statusValue === 'pending'
+                </thead>
+                <tbody>
+                  {bookings.length === 0 ? (
+                    <tr>
+                      <td colSpan="7" className="muted">
+                        Belum ada booking driver.
+                      </td>
+                    </tr>
+                  ) : (
+                    pagedBookings.map((booking) => {
+                      const statusValue = (booking.status || 'pending').toLowerCase()
+                      const isPending = statusValue === 'pending'
 
-                    return (
-                      <tr key={booking.id}>
-                        <td>{formatDateOnly(booking.created_at)}</td>
-                        <td className="cell-wrap">{booking.pickup_location || '-'}</td>
-                        <td className="cell-wrap">{booking.destination || '-'}</td>
-                        <td>{booking.trip_type || '-'}</td>
-                        <td>{formatDateTime(booking.departure_time)}</td>
-                        <td>
-                          <span className={`status-badge status-${statusValue}`}>{booking.status || 'pending'}</span>
-                        </td>
-                        <td>
-                          {isPending ? (
-                            <div className="table-row-actions">
-                              <button
-                                type="button"
-                                className="btn btn-outline-brand"
-                                onClick={() => handleEdit(booking)}
-                                disabled={actionLoadingId === booking.id}
-                              >
-                                Edit
-                              </button>
-                              <button
-                                type="button"
-                                className="btn btn-danger"
-                                onClick={() => handleCancel(booking.id)}
-                                disabled={actionLoadingId === booking.id}
-                              >
-                                {actionLoadingId === booking.id ? 'Cancelling...' : 'Cancel'}
-                              </button>
-                            </div>
-                          ) : (
-                            '-'
-                          )}
-                        </td>
-                      </tr>
-                    )
-                  })
-                )}
-              </tbody>
-            </table>
-          </div>
+                      return (
+                        <tr key={booking.id}>
+                          <td>{formatDateOnly(booking.created_at)}</td>
+                          <td className="cell-wrap">{booking.pickup_location || '-'}</td>
+                          <td className="cell-wrap">{booking.destination || '-'}</td>
+                          <td>{booking.trip_type || '-'}</td>
+                          <td>{formatDateTime(booking.departure_time)}</td>
+                          <td>
+                            <span className={`status-badge status-${statusValue}`}>{booking.status || 'pending'}</span>
+                          </td>
+                          <td>
+                            {isPending ? (
+                              <div className="table-row-actions">
+                                <button
+                                  type="button"
+                                  className="btn btn-outline-brand"
+                                  onClick={() => handleEdit(booking)}
+                                  disabled={actionLoadingId === booking.id}
+                                >
+                                  Edit
+                                </button>
+                                <button
+                                  type="button"
+                                  className="btn btn-danger"
+                                  onClick={() => handleCancel(booking.id)}
+                                  disabled={actionLoadingId === booking.id}
+                                >
+                                  {actionLoadingId === booking.id ? 'Cancelling...' : 'Cancel'}
+                                </button>
+                              </div>
+                            ) : (
+                              '-'
+                            )}
+                          </td>
+                        </tr>
+                      )
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="office-pagination">
+              <button
+                type="button"
+                className="btn btn-neutral"
+                disabled={loading || currentPage <= 1 || bookings.length === 0}
+                onClick={() => setPage((prev) => Math.max(1, Math.min(prev, totalPages) - 1))}
+              >
+                Prev
+              </button>
+              <span className="office-page-info">
+                Page {currentPage} of {totalPages}
+              </span>
+              <button
+                type="button"
+                className="btn btn-neutral"
+                disabled={loading || currentPage >= totalPages || bookings.length === 0}
+                onClick={() => setPage((prev) => Math.min(totalPages, Math.min(prev, totalPages) + 1))}
+              >
+                Next
+              </button>
+            </div>
+          </>
         ) : null}
       </div>
     </MainLayout>

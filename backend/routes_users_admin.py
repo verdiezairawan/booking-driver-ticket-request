@@ -40,6 +40,7 @@ class UserResponse(BaseModel):
     nik: Optional[str] = None
     phone: Optional[str] = None
     email: Optional[str] = None
+    disabled: Optional[bool] = None
 
 
 def ensure_role(uid: str, allowed: tuple[str, ...]):
@@ -63,6 +64,7 @@ def serialize_user(doc_snapshot) -> UserResponse:
         nik=data.get("nik") or data.get("national_id"),
         phone=data.get("phone") or data.get("phone_number"),
         email=data.get("email"),
+        disabled=data.get("disabled", False),
     )
 
 
@@ -102,6 +104,7 @@ def create_user(payload: UserCreate, current_user=Depends(get_current_user)):
             "nik": payload.nik,
             "phone": payload.phone,
             "email": payload.email,
+            "disabled": False,
             "created_at": firestore.SERVER_TIMESTAMP,
             "updated_at": firestore.SERVER_TIMESTAMP,
             "created_by": uid,
@@ -139,3 +142,37 @@ def update_user(user_id: str, payload: UserUpdate, current_user=Depends(get_curr
     updated_snapshot = doc_ref.get()
     return serialize_user(updated_snapshot)
 
+
+@router.patch("/{user_id}/deactivate", response_model=UserResponse)
+def deactivate_user(user_id: str, current_user=Depends(get_current_user)):
+    uid = current_user["uid"]
+    current_role = ensure_role(uid, ("office_coordinator", "superadmin"))
+
+    if user_id == uid:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cannot deactivate your own account")
+
+    doc_ref = db.collection("users").document(user_id)
+    snapshot = doc_ref.get()
+    if not snapshot.exists:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User profile not found")
+
+    target_data = snapshot.to_dict() or {}
+    if target_data.get("role") == "superadmin" and current_role != "superadmin":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
+
+    try:
+        firebase_auth.update_user(user_id, disabled=True)
+    except Exception as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Failed to deactivate user") from exc
+
+    doc_ref.set(
+        {
+            "disabled": True,
+            "updated_at": firestore.SERVER_TIMESTAMP,
+            "updated_by": uid,
+        },
+        merge=True,
+    )
+
+    updated_snapshot = doc_ref.get()
+    return serialize_user(updated_snapshot)

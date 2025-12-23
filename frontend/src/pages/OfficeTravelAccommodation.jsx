@@ -41,6 +41,7 @@ function OfficeTravelAccommodation() {
   const [loading, setLoading] = useState(false)
   const [successMessage, setSuccessMessage] = useState('')
   const [errorMessage, setErrorMessage] = useState('')
+  const [showSuccessModal, setShowSuccessModal] = useState(false)
 
   const handleNavigate = (item) => {
     if (item === 'Dashboard') navigate('/office/home')
@@ -70,6 +71,7 @@ function OfficeTravelAccommodation() {
     setLoading(true)
     setSuccessMessage('')
     setErrorMessage('')
+    setShowSuccessModal(false)
 
     const token = localStorage.getItem('authToken')
     if (!token) {
@@ -105,6 +107,7 @@ function OfficeTravelAccommodation() {
       } else {
         setSuccessMessage('Travel accommodation created and approved.')
         setForm(initialForm)
+        setShowSuccessModal(true)
       }
     } catch (error) {
       setErrorMessage('Network error. Please try again.')
@@ -395,6 +398,37 @@ function OfficeTravelAccommodation() {
               </button>
             </div>
           </form>
+
+          {showSuccessModal ? (
+            <div className="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="accommodation-success-title">
+              <div className="modal success-modal">
+                <div className="success-modal-icon" aria-hidden="true">
+                  <i className="bi bi-check-lg" />
+                </div>
+                <h2 id="accommodation-success-title" className="success-modal-title">
+                  Submitted
+                </h2>
+                <p className="success-modal-message">
+                  Travel accommodation was created and approved successfully. It will appear in ticket history.
+                </p>
+                <div className="success-modal-actions">
+                  <button
+                    type="button"
+                    className="btn btn-brand"
+                    onClick={() => {
+                      setShowSuccessModal(false)
+                      navigate('/office/ticket-history')
+                    }}
+                  >
+                    View History
+                  </button>
+                  <button type="button" className="btn btn-outline-brand" onClick={() => setShowSuccessModal(false)}>
+                    Back to Form
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : null}
         </section>
       </div>
     </MainLayout>

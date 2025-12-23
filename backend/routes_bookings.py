@@ -39,6 +39,8 @@ class BookingResponse(BaseModel):
     user_id: Optional[str] = None
     driver_id: Optional[str] = None
     requester_name: Optional[str] = None
+    requester_dept_job_position: Optional[str] = None
+    requester_nik: Optional[str] = None
     requester_phone: Optional[str] = None
     requester_email: Optional[str] = None
     pickup_location: str
@@ -81,6 +83,8 @@ def serialize_booking(doc_snapshot) -> BookingResponse:
         user_id=data.get("user_id"),
         driver_id=data.get("driver_id"),
         requester_name=data.get("requester_name"),
+        requester_dept_job_position=data.get("requester_dept_job_position"),
+        requester_nik=data.get("requester_nik"),
         requester_phone=data.get("requester_phone"),
         requester_email=data.get("requester_email"),
         pickup_location=data.get("pickup_location"),
@@ -116,11 +120,15 @@ def create_booking(payload: BookingCreate, current_user=Depends(get_current_user
 
     requester_name = None
     requester_phone = None
+    requester_dept_job_position = None
+    requester_nik = None
     doc = db.collection("users").document(uid).get()
     if doc.exists:
         data = doc.to_dict() or {}
         requester_name = data.get("name")
         requester_phone = data.get("phone_number") or data.get("phone")
+        requester_dept_job_position = data.get("dept_job_position") or data.get("department") or data.get("job_position")
+        requester_nik = data.get("nik") or data.get("national_id")
 
     doc_ref = db.collection("bookings").document()
     data = {
@@ -140,6 +148,10 @@ def create_booking(payload: BookingCreate, current_user=Depends(get_current_user
         data["requester_name"] = requester_name
     if requester_phone:
         data["requester_phone"] = requester_phone
+    if requester_dept_job_position:
+        data["requester_dept_job_position"] = requester_dept_job_position
+    if requester_nik:
+        data["requester_nik"] = requester_nik
     doc_ref.set(data)
     snapshot = doc_ref.get()
     return serialize_booking(snapshot)
