@@ -1,21 +1,23 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import MainLayout from '../components/MainLayout'
+import useOfficeSidebar from '../hooks/useOfficeSidebar'
 
 const menuItems = [
-  'Dashboard',
-  'Ticket Requests',
-  'Driver Requests',
-  'Ticket History',
-  'Driver History',
-  'Travel Accommodation',
-  'Assign Drivers',
-  'Manage User',
-  'Report',
+  { label: 'Dashboard', icon: 'bi-speedometer2' },
+  { label: 'Ticket Requests', icon: 'bi-ticket-perforated' },
+  { label: 'Driver Requests', icon: 'bi-car-front' },
+  { label: 'Ticket History', icon: 'bi-clock-history' },
+  { label: 'Driver History', icon: 'bi-card-list' },
+  { label: 'Travel Accommodation', icon: 'bi-building' },
+  { label: 'Assign Drivers', icon: 'bi-person-check' },
+  { label: 'Manage User', icon: 'bi-people' },
+  { label: 'Report', icon: 'bi-clipboard-data' },
 ]
 
 function OfficeDriverHistory() {
   const navigate = useNavigate()
+  const { collapsed: isSidebarCollapsed, toggle: toggleSidebar } = useOfficeSidebar()
   const [bookings, setBookings] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -184,7 +186,15 @@ function OfficeDriverHistory() {
 
   const formatDate = (value) => {
     const dt = toDate(value)
-    return dt ? dt.toLocaleDateString('id-ID') : '-'
+    return dt ? dt.toLocaleDateString('en-GB') : '-'
+  }
+
+  const formatTripType = (value) => {
+    if (!value) return '-'
+    if (value === 'antar') return 'Drop-off'
+    if (value === 'jemput') return 'Pick-up'
+    if (value === 'fulltrip') return 'Full Trip'
+    return value
   }
 
   const formatDistance = (booking) => {
@@ -256,7 +266,7 @@ function OfficeDriverHistory() {
       booking.destination || '',
       booking.passenger_count ?? '',
       formatDate(booking.departure_time),
-      booking.trip_type || '',
+      formatTripType(booking.trip_type),
       booking.driver_name || booking.driver_id || '',
       booking.starting_mileage ?? '',
       booking.ending_mileage ?? '',
@@ -296,20 +306,32 @@ function OfficeDriverHistory() {
 
   return (
     <MainLayout title="">
-      <div className="office-dashboard fixed-sidebar">
+      <div className={`office-dashboard fixed-sidebar ${isSidebarCollapsed ? 'is-collapsed' : ''}`}>
         <aside className="office-sidebar visible">
           <div className="sidebar-header">
             <span className="sidebar-role">Office Coordinator</span>
+            <button
+              type="button"
+              className="sidebar-toggle"
+              onClick={toggleSidebar}
+              aria-label={isSidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+              title={isSidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            >
+              <i className={`bi ${isSidebarCollapsed ? 'bi-chevron-right' : 'bi-chevron-left'}`} aria-hidden="true" />
+            </button>
           </div>
           <nav className="sidebar-menu">
             {menuItems.map((item) => (
               <button
-                key={item}
+                key={item.label}
                 type="button"
-                className={`sidebar-item ${item === 'Driver History' ? 'active' : ''}`}
-                onClick={() => handleNavigate(item)}
+                className={`sidebar-item ${item.label === 'Driver History' ? 'active' : ''}`}
+                onClick={() => handleNavigate(item.label)}
+                aria-label={item.label}
+                title={item.label}
               >
-                {item}
+                <i className={`bi ${item.icon} sidebar-item__icon`} aria-hidden="true" />
+                <span className="sidebar-item__label">{item.label}</span>
               </button>
             ))}
           </nav>
@@ -451,7 +473,7 @@ function OfficeDriverHistory() {
                       <td>{booking.destination || '-'}</td>
                       <td>{booking.passenger_count ?? '-'}</td>
                       <td>{formatDate(booking.departure_time)}</td>
-                      <td>{booking.trip_type || '-'}</td>
+                      <td>{formatTripType(booking.trip_type)}</td>
                       <td>{booking.driver_name || booking.driver_id || '-'}</td>
                       <td>{booking.starting_mileage ?? '-'}</td>
                       <td>{booking.ending_mileage ?? '-'}</td>

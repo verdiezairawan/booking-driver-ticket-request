@@ -163,14 +163,16 @@ function TicketRequest() {
         </header>
 
         <form className="ticket-form" onSubmit={handleSubmit}>
-          <section className="field-group">
-            <div className="field-heading">
-              <div className="heading-icon">ID</div>
-              <div>
-                <h2>Identity & Contact Information</h2>
-                <p className="muted">Tell us who is traveling</p>
+            <section className="field-group">
+              <div className="field-heading">
+                <div className="heading-icon" aria-hidden="true">
+                  <i className="bi bi-person-badge" />
+                </div>
+                <div>
+                  <h2>Identity & Contact Information</h2>
+                  <p className="muted">Tell us who is traveling</p>
+                </div>
               </div>
-            </div>
             <div className="field-grid">
               <label className="inline-label">
                 <span>Full name</span>
@@ -213,10 +215,10 @@ function TicketRequest() {
                 />
               </label>
               <label className="inline-label">
-                <span>National ID (KTP)</span>
+                <span>National ID</span>
                 <input
                   type="text"
-                  placeholder="National ID (KTP)"
+                  placeholder="National ID"
                   value={form.national_id}
                   onChange={handleChange('national_id')}
                   required
@@ -227,7 +229,9 @@ function TicketRequest() {
 
           <section className="field-group">
             <div className="field-heading">
-              <div className="heading-icon">TR</div>
+              <div className="heading-icon" aria-hidden="true">
+                <i className="bi bi-airplane" />
+              </div>
               <div>
                 <h2>Travel Details</h2>
                 <p className="muted">Where and when you need to go</p>
@@ -288,7 +292,9 @@ function TicketRequest() {
 
           <section className="field-group">
             <div className="field-heading">
-              <div className="heading-icon">HT</div>
+              <div className="heading-icon" aria-hidden="true">
+                <i className="bi bi-building" />
+              </div>
               <div>
                 <h2>Accommodation & Transportation</h2>
                 <p className="muted">Hotel and ride preferences</p>
@@ -373,7 +379,9 @@ function TicketRequest() {
 
           <section className="field-group">
             <div className="field-heading">
-              <div className="heading-icon">AP</div>
+              <div className="heading-icon" aria-hidden="true">
+                <i className="bi bi-paperclip" />
+              </div>
               <div>
                 <h2>Approval & Attachments</h2>
                 <p className="muted">Upload approvals or share notes</p>
@@ -408,7 +416,7 @@ function TicketRequest() {
               {loading ? 'Submitting...' : editingTicketId ? 'Save Changes' : 'Submit Request'}
             </button>
             <button type="button" className="btn btn-outline-danger" onClick={() => navigate('/user/home')}>
-              Batal
+              Cancel
             </button>
           </div>
         </form>

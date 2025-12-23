@@ -77,7 +77,7 @@ function BookingDriver() {
     setErrorMessage('')
 
     if (!form.departure_date || !form.departure_time) {
-      setErrorMessage('Tanggal dan jam keberangkatan wajib diisi.')
+      setErrorMessage('Departure date and time are required.')
       setLoading(false)
       return
     }
@@ -91,7 +91,7 @@ function BookingDriver() {
 
     const departureDateTime = new Date(`${form.departure_date}T${form.departure_time}`)
     if (Number.isNaN(departureDateTime.getTime())) {
-      setErrorMessage('Format tanggal atau jam tidak valid.')
+      setErrorMessage('Invalid date or time format.')
       setLoading(false)
       return
     }
@@ -152,55 +152,57 @@ function BookingDriver() {
           </button>
           <div>
             <p className="eyebrow">Booking Driver</p>
-            <h1>{editingBookingId ? 'Edit Booking' : 'Buat Booking Baru'}</h1>
-            <p className="muted">Isi form berikut untuk permintaan driver</p>
+            <h1>{editingBookingId ? 'Edit Booking' : 'Create New Booking'}</h1>
+            <p className="muted">Fill out the form below to request a driver</p>
           </div>
         </header>
 
         <form className="ticket-form" onSubmit={handleSubmit}>
           <section className="booking-card">
             <div className="booking-card__header">
-              <div className="heading-icon">BD</div>
+              <div className="heading-icon" aria-hidden="true">
+                <i className="bi bi-car-front-fill" />
+              </div>
               <div>
-                <h2>Detail Perjalanan</h2>
-                <p className="muted">Lokasi, tujuan, dan jadwal keberangkatan</p>
+                <h2>Trip Details</h2>
+                <p className="muted">Pickup, destination, and departure schedule</p>
               </div>
             </div>
 
             <div className="booking-grid">
               <label className="form-field">
-                <span>Lokasi Awal</span>
+                <span>Pickup Location</span>
                 <input
                   type="text"
-                  placeholder="Lobby Kantor"
+                  placeholder="Office Lobby"
                   value={form.pickup_location}
                   onChange={handleChange('pickup_location')}
                   required
                 />
               </label>
               <label className="form-field">
-                <span>Tujuan</span>
+                <span>Destination</span>
                 <input
                   type="text"
-                  placeholder="Bandara Soetta"
+                  placeholder="Soekarno-Hatta Airport"
                   value={form.destination}
                   onChange={handleChange('destination')}
                   required
                 />
               </label>
               <label className="form-field">
-                <span>Jenis Perjalanan</span>
+                <span>Trip Type</span>
                 <select value={form.trip_type} onChange={handleChange('trip_type')} required>
                   <option value="" disabled>
-                    Pilih jenis...
+                    Select type...
                   </option>
-                  <option value="antar">Antar</option>
-                  <option value="jemput">Jemput</option>
+                  <option value="antar">Drop-off</option>
+                  <option value="jemput">Pick-up</option>
                   <option value="fulltrip">Full Trip</option>
                 </select>
               </label>
               <label className="form-field">
-                <span>Tanggal Keberangkatan</span>
+                <span>Departure Date</span>
                 <input
                   type="date"
                   value={form.departure_date}
@@ -209,7 +211,7 @@ function BookingDriver() {
                 />
               </label>
               <label className="form-field">
-                <span>Jam Keberangkatan</span>
+                <span>Departure Time</span>
                 <input
                   type="time"
                   value={form.departure_time}
@@ -218,7 +220,7 @@ function BookingDriver() {
                 />
               </label>
               <label className="form-field">
-                <span>Jumlah Penumpang</span>
+                <span>Passenger Count</span>
                 <input
                   type="number"
                   min="1"
@@ -234,10 +236,10 @@ function BookingDriver() {
 
           <div className="form-actions">
             <button type="submit" className="btn btn-primary" disabled={loading}>
-              {loading ? 'Mengirim...' : editingBookingId ? 'Save Changes' : 'Kirim Request'}
+              {loading ? 'Submitting...' : editingBookingId ? 'Save Changes' : 'Submit Request'}
             </button>
             <button type="button" className="btn btn-outline-danger" onClick={() => navigate('/user/home')}>
-              Batal
+              Cancel
             </button>
           </div>
         </form>

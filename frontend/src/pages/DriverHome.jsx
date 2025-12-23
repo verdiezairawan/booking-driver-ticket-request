@@ -15,6 +15,13 @@ function DriverHome() {
   const [actionError, setActionError] = useState('')
   const [processing, setProcessing] = useState({})
 
+  const [calendarMonth, setCalendarMonth] = useState(() => {
+    const now = new Date()
+    return new Date(now.getFullYear(), now.getMonth(), 1)
+  })
+  const [selectedDate, setSelectedDate] = useState(() => new Date())
+  const [filterDateKey, setFilterDateKey] = useState('')
+
   const [startModalOpen, setStartModalOpen] = useState(false)
   const [finishModalOpen, setFinishModalOpen] = useState(false)
   const [activeBooking, setActiveBooking] = useState(null)
@@ -263,12 +270,95 @@ function DriverHome() {
     return sorted
   }, [bookings, tab])
 
+  const toDateKey = (date) => {
+    if (!(date instanceof Date) || Number.isNaN(date.getTime())) return ''
+    const year = String(date.getFullYear())
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
+  }
+
+  const monthLabel = useMemo(() => {
+    const label = calendarMonth.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })
+    return label ? label.charAt(0).toUpperCase() + label.slice(1) : ''
+  }, [calendarMonth])
+
+  const calendarWeeks = useMemo(() => {
+    const year = calendarMonth.getFullYear()
+    const month = calendarMonth.getMonth()
+    const firstDay = new Date(year, month, 1)
+    const daysInMonth = new Date(year, month + 1, 0).getDate()
+    const startIndex = (firstDay.getDay() + 6) % 7 // Monday = 0
+    const totalSlots = Math.ceil((startIndex + daysInMonth) / 7) * 7
+
+    const slots = Array.from({ length: totalSlots }, (_, index) => {
+      const dayNumber = index - startIndex + 1
+      if (dayNumber < 1 || dayNumber > daysInMonth) return null
+      return new Date(year, month, dayNumber)
+    })
+
+    const weeks = []
+    for (let i = 0; i < slots.length; i += 7) {
+      weeks.push(slots.slice(i, i + 7))
+    }
+
+    return weeks
+  }, [calendarMonth])
+
+  const taskMetaByDate = useMemo(() => {
+    const map = new Map()
+    bookings.forEach((booking) => {
+      if (!booking?.departure_time) return
+      const dt = new Date(booking.departure_time)
+      if (Number.isNaN(dt.getTime())) return
+      const key = toDateKey(dt)
+      if (!key) return
+
+      const status = String(booking.status || 'pending').toLowerCase()
+      const existing = map.get(key) || { total: 0, incomplete: 0, completed: 0 }
+      existing.total += 1
+      if (status === 'completed') {
+        existing.completed += 1
+      } else {
+        existing.incomplete += 1
+      }
+      map.set(key, existing)
+    })
+    return map
+  }, [bookings])
+
+  const selectedKey = useMemo(() => toDateKey(selectedDate), [selectedDate])
+  const todayKey = useMemo(() => toDateKey(new Date()), [])
+
+  useEffect(() => {
+    const sameMonth =
+      selectedDate.getFullYear() === calendarMonth.getFullYear() &&
+      selectedDate.getMonth() === calendarMonth.getMonth()
+
+    if (!sameMonth) {
+      setSelectedDate(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth(), 1))
+    }
+
+    setFilterDateKey('')
+  }, [calendarMonth])
+
+  const visibleItems = useMemo(() => {
+    if (!filterDateKey) return items
+
+    return items.filter((booking) => {
+      if (!booking?.departure_time) return false
+      const dt = new Date(booking.departure_time)
+      if (Number.isNaN(dt.getTime())) return false
+      return toDateKey(dt) === filterDateKey
+    })
+  }, [items, filterDateKey])
+
   const formatDeparture = (value) => {
     if (!value) return '-'
     const dt = new Date(value)
     if (Number.isNaN(dt.getTime())) return '-'
-    const datePart = dt.toLocaleDateString('id-ID')
-    const timePart = dt.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
+    const datePart = dt.toLocaleDateString('en-GB')
+    const timePart = dt.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false })
     return `${datePart} ${timePart}`
   }
 
@@ -308,21 +398,119 @@ function DriverHome() {
           </div>
         </header>
 
+        <section className="driver-calendar" aria-label="Task calendar">
+          <div className="calendar-header">
+            <button
+              type="button"
+              className="calendar-nav"
+              onClick={() =>
+                setCalendarMonth((prev) => new Date(prev.getFullYear(), prev.getMonth() - 1, 1))
+              }
+              aria-label="Previous month"
+            >
+              <i className="bi bi-chevron-left" aria-hidden="true" />
+            </button>
+            <div className="calendar-month" aria-live="polite">
+              {monthLabel}
+            </div>
+            <button
+              type="button"
+              className="calendar-nav"
+              onClick={() =>
+                setCalendarMonth((prev) => new Date(prev.getFullYear(), prev.getMonth() + 1, 1))
+              }
+              aria-label="Next month"
+            >
+              <i className="bi bi-chevron-right" aria-hidden="true" />
+            </button>
+          </div>
+
+          <div className="calendar-legend" aria-label="Calendar legend">
+            <div className="calendar-legend-item">
+              <span className="calendar-dot task-pending" aria-hidden="true" />
+              <span>Has active tasks</span>
+            </div>
+            <div className="calendar-legend-item">
+              <span className="calendar-dot task-completed" aria-hidden="true" />
+              <span>All tasks completed</span>
+            </div>
+            <div className="calendar-legend-item">
+              <span className="calendar-dot no-task" aria-hidden="true" />
+              <span>No tasks</span>
+            </div>
+          </div>
+
+          <div className="calendar-grid" role="grid" aria-label={monthLabel}>
+            {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((label) => (
+              <div key={label} className="calendar-weekday" role="columnheader">
+                {label}
+              </div>
+            ))}
+
+            {calendarWeeks.map((week, weekIndex) =>
+              week.map((date, dayIndex) => {
+                if (!date) {
+                  return <div key={`${weekIndex}-${dayIndex}`} className="calendar-cell calendar-cell--empty" />
+                }
+
+                const key = toDateKey(date)
+                const isSelected = key === selectedKey
+                const isToday = key === todayKey
+                const meta = taskMetaByDate.get(key)
+                const count = meta?.total || 0
+                const dayNumber = date.getDate()
+                const dotState = meta ? (meta.incomplete > 0 ? 'task-pending' : 'task-completed') : 'no-task'
+
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    className={`calendar-cell ${isSelected ? 'is-selected' : ''} ${isToday ? 'is-today' : ''}`}
+                    onClick={() => {
+                      setSelectedDate(date)
+                      setFilterDateKey((prev) => {
+                        const next = prev === key ? '' : key
+                        if (next && meta) {
+                          if (tab === TABS.active && meta.incomplete === 0 && meta.completed > 0) {
+                            setTab(TABS.completed)
+                          }
+                          if (tab === TABS.completed && meta.completed === 0 && meta.incomplete > 0) {
+                            setTab(TABS.active)
+                          }
+                        }
+                        return next
+                      })
+                    }}
+                    aria-label={`${dayNumber} ${monthLabel}${count ? `, ${count} task(s)` : ''}`}
+                  >
+                    <span className="calendar-date">{dayNumber}</span>
+                    <span className={`calendar-dot ${dotState}`} aria-hidden="true" />
+                  </button>
+                )
+              })
+            )}
+          </div>
+        </section>
+
         {loading ? <p className="muted">Loading assignments...</p> : null}
         {!loading && error ? <p className="error-text">{error}</p> : null}
         {!loading && !error && actionMessage ? <p className="success-text">{actionMessage}</p> : null}
         {!loading && !error && actionError ? <p className="error-text">{actionError}</p> : null}
 
-        {!loading && !error && items.length === 0 ? (
+        {!loading && !error && visibleItems.length === 0 ? (
           <div className="driver-empty">
-            <h2>No assignments yet</h2>
-            <p className="muted">When the office assigns you a booking, it will appear here.</p>
+            <h2>{filterDateKey ? 'No assignments for this date' : 'No assignments yet'}</h2>
+            <p className="muted">
+              {filterDateKey
+                ? 'Try selecting another date or clear the filter by clicking the same date again.'
+                : 'When the office assigns you a booking, it will appear here.'}
+            </p>
           </div>
         ) : null}
 
-        {!loading && !error && items.length > 0 ? (
+        {!loading && !error && visibleItems.length > 0 ? (
           <div className="driver-list">
-            {items.map((booking) => {
+            {visibleItems.map((booking) => {
               const phone = booking.requester_phone || ''
               const email = booking.requester_email || ''
               const isCompleted = booking.status === 'completed'
@@ -378,7 +566,7 @@ function DriverHome() {
                           }
                         }}
                       >
-                        {isStarted ? 'Selesai' : 'Start'}
+                        {isStarted ? 'Finish' : 'Start'}
                       </button>
                     ) : null}
                   </div>

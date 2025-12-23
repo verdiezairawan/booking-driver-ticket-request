@@ -1,17 +1,18 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import MainLayout from '../components/MainLayout'
+import useOfficeSidebar from '../hooks/useOfficeSidebar'
 
 const menuItems = [
-  'Dashboard',
-  'Ticket Requests',
-  'Driver Requests',
-  'Ticket History',
-  'Driver History',
-  'Travel Accommodation',
-  'Assign Drivers',
-  'Manage User',
-  'Report',
+  { label: 'Dashboard', icon: 'bi-speedometer2' },
+  { label: 'Ticket Requests', icon: 'bi-ticket-perforated' },
+  { label: 'Driver Requests', icon: 'bi-car-front' },
+  { label: 'Ticket History', icon: 'bi-clock-history' },
+  { label: 'Driver History', icon: 'bi-card-list' },
+  { label: 'Travel Accommodation', icon: 'bi-building' },
+  { label: 'Assign Drivers', icon: 'bi-person-check' },
+  { label: 'Manage User', icon: 'bi-people' },
+  { label: 'Report', icon: 'bi-clipboard-data' },
 ]
 
 const initialForm = {
@@ -31,6 +32,7 @@ const initialForm = {
 
 function OfficeAssignDrivers() {
   const navigate = useNavigate()
+  const { collapsed: isSidebarCollapsed, toggle: toggleSidebar } = useOfficeSidebar()
   const [form, setForm] = useState(initialForm)
   const [loading, setLoading] = useState(false)
   const [successMessage, setSuccessMessage] = useState('')
@@ -175,20 +177,32 @@ function OfficeAssignDrivers() {
 
   return (
     <MainLayout title="">
-      <div className="office-dashboard fixed-sidebar">
+      <div className={`office-dashboard fixed-sidebar ${isSidebarCollapsed ? 'is-collapsed' : ''}`}>
         <aside className="office-sidebar visible">
           <div className="sidebar-header">
             <span className="sidebar-role">Office Coordinator</span>
+            <button
+              type="button"
+              className="sidebar-toggle"
+              onClick={toggleSidebar}
+              aria-label={isSidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+              title={isSidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            >
+              <i className={`bi ${isSidebarCollapsed ? 'bi-chevron-right' : 'bi-chevron-left'}`} aria-hidden="true" />
+            </button>
           </div>
           <nav className="sidebar-menu">
             {menuItems.map((item) => (
               <button
-                key={item}
+                key={item.label}
                 type="button"
-                className={`sidebar-item ${item === 'Assign Drivers' ? 'active' : ''}`}
-                onClick={() => handleNavigate(item)}
+                className={`sidebar-item ${item.label === 'Assign Drivers' ? 'active' : ''}`}
+                onClick={() => handleNavigate(item.label)}
+                aria-label={item.label}
+                title={item.label}
               >
-                {item}
+                <i className={`bi ${item.icon} sidebar-item__icon`} aria-hidden="true" />
+                <span className="sidebar-item__label">{item.label}</span>
               </button>
             ))}
           </nav>
@@ -206,7 +220,9 @@ function OfficeAssignDrivers() {
           <form className="ticket-form" onSubmit={handleSubmit}>
             <section className="field-group">
               <div className="field-heading">
-                <div className="heading-icon">ID</div>
+                <div className="heading-icon" aria-hidden="true">
+                  <i className="bi bi-person-badge" />
+                </div>
                 <div>
                   <h2>Requester</h2>
                   <p className="muted">User details (can be a non-account user)</p>
@@ -234,10 +250,10 @@ function OfficeAssignDrivers() {
                   />
                 </label>
                 <label className="inline-label">
-                  <span>NIK</span>
+                  <span>National ID</span>
                   <input
                     type="text"
-                    placeholder="NIK"
+                    placeholder="National ID"
                     value={form.requester_nik}
                     onChange={handleChange('requester_nik')}
                     required
@@ -268,7 +284,9 @@ function OfficeAssignDrivers() {
 
             <section className="field-group">
               <div className="field-heading">
-                <div className="heading-icon">BD</div>
+                <div className="heading-icon" aria-hidden="true">
+                  <i className="bi bi-car-front-fill" />
+                </div>
                 <div>
                   <h2>Booking Details</h2>
                   <p className="muted">Pickup, destination, schedule</p>
@@ -301,8 +319,8 @@ function OfficeAssignDrivers() {
                     <option value="" disabled>
                       Type of trip
                     </option>
-                    <option value="antar">Antar</option>
-                    <option value="jemput">Jemput</option>
+                    <option value="antar">Drop-off</option>
+                    <option value="jemput">Pick-up</option>
                     <option value="fulltrip">Full Trip</option>
                   </select>
                 </label>
@@ -329,7 +347,9 @@ function OfficeAssignDrivers() {
 
             <section className="field-group">
               <div className="field-heading">
-                <div className="heading-icon">DR</div>
+                <div className="heading-icon" aria-hidden="true">
+                  <i className="bi bi-person-check" />
+                </div>
                 <div>
                   <h2>Driver</h2>
                   <p className="muted">Assign a driver</p>

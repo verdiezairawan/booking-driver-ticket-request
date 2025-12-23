@@ -1,17 +1,18 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import MainLayout from '../components/MainLayout'
+import useOfficeSidebar from '../hooks/useOfficeSidebar'
 
 const menuItems = [
-  'Dashboard',
-  'Ticket Requests',
-  'Driver Requests',
-  'Ticket History',
-  'Driver History',
-  'Travel Accommodation',
-  'Assign Drivers',
-  'Manage User',
-  'Report',
+  { label: 'Dashboard', icon: 'bi-speedometer2' },
+  { label: 'Ticket Requests', icon: 'bi-ticket-perforated' },
+  { label: 'Driver Requests', icon: 'bi-car-front' },
+  { label: 'Ticket History', icon: 'bi-clock-history' },
+  { label: 'Driver History', icon: 'bi-card-list' },
+  { label: 'Travel Accommodation', icon: 'bi-building' },
+  { label: 'Assign Drivers', icon: 'bi-person-check' },
+  { label: 'Manage User', icon: 'bi-people' },
+  { label: 'Report', icon: 'bi-clipboard-data' },
 ]
 
 const initialCreate = {
@@ -26,6 +27,7 @@ const initialCreate = {
 
 function OfficeManageUser() {
   const navigate = useNavigate()
+  const { collapsed: isSidebarCollapsed, toggle: toggleSidebar } = useOfficeSidebar()
   const [users, setUsers] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -252,20 +254,32 @@ function OfficeManageUser() {
 
   return (
     <MainLayout title="">
-      <div className="office-dashboard fixed-sidebar">
+      <div className={`office-dashboard fixed-sidebar ${isSidebarCollapsed ? 'is-collapsed' : ''}`}>
         <aside className="office-sidebar visible">
           <div className="sidebar-header">
             <span className="sidebar-role">Office Coordinator</span>
+            <button
+              type="button"
+              className="sidebar-toggle"
+              onClick={toggleSidebar}
+              aria-label={isSidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+              title={isSidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            >
+              <i className={`bi ${isSidebarCollapsed ? 'bi-chevron-right' : 'bi-chevron-left'}`} aria-hidden="true" />
+            </button>
           </div>
           <nav className="sidebar-menu">
             {menuItems.map((item) => (
               <button
-                key={item}
+                key={item.label}
                 type="button"
-                className={`sidebar-item ${item === 'Manage User' ? 'active' : ''}`}
-                onClick={() => handleNavigate(item)}
+                className={`sidebar-item ${item.label === 'Manage User' ? 'active' : ''}`}
+                onClick={() => handleNavigate(item.label)}
+                aria-label={item.label}
+                title={item.label}
               >
-                {item}
+                <i className={`bi ${item.icon} sidebar-item__icon`} aria-hidden="true" />
+                <span className="sidebar-item__label">{item.label}</span>
               </button>
             ))}
           </nav>
@@ -299,9 +313,9 @@ function OfficeManageUser() {
                 </div>
                 <div className="field-grid">
                   <label className="inline-label">
-                    <span>Nama User</span>
+                    <span>User Name</span>
                     <input
-                      placeholder="Nama User"
+                      placeholder="User Name"
                       value={createForm.name}
                       onChange={handleCreateChange('name')}
                       required
@@ -326,8 +340,13 @@ function OfficeManageUser() {
                     </select>
                   </label>
                   <label className="inline-label">
-                    <span>NIK</span>
-                    <input placeholder="NIK" value={createForm.nik} onChange={handleCreateChange('nik')} required />
+                    <span>National ID</span>
+                    <input
+                      placeholder="National ID"
+                      value={createForm.nik}
+                      onChange={handleCreateChange('nik')}
+                      required
+                    />
                   </label>
                   <label className="inline-label">
                     <span>Phone</span>
@@ -370,15 +389,17 @@ function OfficeManageUser() {
             <form className="ticket-form" onSubmit={handleUpdate}>
               <section className="field-group">
                 <div className="field-heading">
-                  <div className="heading-icon">ED</div>
+                  <div className="heading-icon" aria-hidden="true">
+                    <i className="bi bi-pencil-square" />
+                  </div>
                   <div>
                     <h2>Edit User</h2>
                   </div>
                 </div>
                 <div className="field-grid">
                   <label className="inline-label">
-                    <span>Nama User</span>
-                    <input placeholder="Nama User" value={editForm.name} onChange={handleEditChange('name')} required />
+                    <span>User Name</span>
+                    <input placeholder="User Name" value={editForm.name} onChange={handleEditChange('name')} required />
                   </label>
                   <label className="inline-label">
                     <span>User Dept/Job Position</span>
@@ -399,8 +420,8 @@ function OfficeManageUser() {
                     </select>
                   </label>
                   <label className="inline-label">
-                    <span>NIK</span>
-                    <input placeholder="NIK" value={editForm.nik} onChange={handleEditChange('nik')} required />
+                    <span>National ID</span>
+                    <input placeholder="National ID" value={editForm.nik} onChange={handleEditChange('nik')} required />
                   </label>
                   <label className="inline-label">
                     <span>Phone</span>
@@ -445,10 +466,10 @@ function OfficeManageUser() {
             <table className="office-table">
               <thead>
                 <tr>
-                  <th>Nama User</th>
+                  <th>User Name</th>
                   <th>User Dept/Job Position</th>
                   <th>Role</th>
-                  <th>NIK</th>
+                  <th>National ID</th>
                   <th>Phone</th>
                   <th>Email</th>
                   <th>Action</th>

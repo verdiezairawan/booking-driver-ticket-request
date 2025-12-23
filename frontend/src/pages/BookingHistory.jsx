@@ -113,16 +113,28 @@ function BookingHistory() {
     return Number.isNaN(parsed.getTime()) ? null : parsed
   }
 
+  const formatTripType = (value) => {
+    if (!value) return '-'
+    if (value === 'antar') return 'Drop-off'
+    if (value === 'jemput') return 'Pick-up'
+    if (value === 'fulltrip') return 'Full Trip'
+    return value
+  }
+
   const formatDateTime = (value) => {
     const date = toDate(value)
     if (!date) return '-'
-    return `${date.toLocaleDateString('id-ID')} ${date.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}`
+    return `${date.toLocaleDateString('en-GB')} ${date.toLocaleTimeString('en-GB', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    })}`
   }
 
   const formatDateOnly = (value) => {
     const date = toDate(value)
     if (!date) return '-'
-    return date.toLocaleDateString('id-ID')
+    return date.toLocaleDateString('en-GB')
   }
 
   return (
@@ -134,8 +146,8 @@ function BookingHistory() {
           </button>
           <div>
             <p className="eyebrow">Booking History</p>
-            <h1>Riwayat Booking Driver</h1>
-            <p className="muted">Lihat status semua permintaan driver kamu</p>
+            <h1>Driver Booking History</h1>
+            <p className="muted">Track the status of all your driver booking requests</p>
           </div>
         </header>
 
@@ -162,7 +174,7 @@ function BookingHistory() {
                   {bookings.length === 0 ? (
                     <tr>
                       <td colSpan="7" className="muted">
-                        Belum ada booking driver.
+                        No driver bookings yet.
                       </td>
                     </tr>
                   ) : (
@@ -175,7 +187,7 @@ function BookingHistory() {
                           <td>{formatDateOnly(booking.created_at)}</td>
                           <td className="cell-wrap">{booking.pickup_location || '-'}</td>
                           <td className="cell-wrap">{booking.destination || '-'}</td>
-                          <td>{booking.trip_type || '-'}</td>
+                          <td>{formatTripType(booking.trip_type)}</td>
                           <td>{formatDateTime(booking.departure_time)}</td>
                           <td>
                             <span className={`status-badge status-${statusValue}`}>{booking.status || 'pending'}</span>

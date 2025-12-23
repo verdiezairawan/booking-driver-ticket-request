@@ -1,30 +1,32 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import MainLayout from '../components/MainLayout'
+import useOfficeSidebar from '../hooks/useOfficeSidebar'
 
 const menuItems = [
-  'Dashboard',
-  'Ticket Requests',
-  'Driver Requests',
-  'Ticket History',
-  'Driver History',
-  'Travel Accommodation',
-  'Assign Drivers',
-  'Manage User',
-  'Report',
+  { label: 'Dashboard', icon: 'bi-speedometer2' },
+  { label: 'Ticket Requests', icon: 'bi-ticket-perforated' },
+  { label: 'Driver Requests', icon: 'bi-car-front' },
+  { label: 'Ticket History', icon: 'bi-clock-history' },
+  { label: 'Driver History', icon: 'bi-card-list' },
+  { label: 'Travel Accommodation', icon: 'bi-building' },
+  { label: 'Assign Drivers', icon: 'bi-person-check' },
+  { label: 'Manage User', icon: 'bi-people' },
+  { label: 'Report', icon: 'bi-clipboard-data' },
 ]
 
 const actionConfig = [
-  { label: 'Pending Tickets', type: 'ticketPending', icon: '🎟️' },
-  { label: 'Approved Travel', type: 'ticketApproved', icon: '✅' },
-  { label: 'Rejected Travel', type: 'ticketRejected', icon: '🚫' },
-  { label: 'Pending Bookings', type: 'bookingPending', icon: '🚗' },
-  { label: 'Rejected Drivers', type: 'bookingRejected', icon: '⛔' },
-  { label: 'Completed Drivers', type: 'bookingCompleted', icon: '✔️' },
+  { label: 'Pending Tickets', type: 'ticketPending', icon: 'bi-ticket-perforated-fill' },
+  { label: 'Approved Travel', type: 'ticketApproved', icon: 'bi-check-circle-fill' },
+  { label: 'Rejected Travel', type: 'ticketRejected', icon: 'bi-x-circle-fill' },
+  { label: 'Pending Bookings', type: 'bookingPending', icon: 'bi-car-front-fill' },
+  { label: 'Rejected Drivers', type: 'bookingRejected', icon: 'bi-slash-circle-fill' },
+  { label: 'Completed Drivers', type: 'bookingCompleted', icon: 'bi-check2-circle' },
 ]
 
 function OfficeHome() {
   const navigate = useNavigate()
+  const { collapsed: isSidebarCollapsed, toggle: toggleSidebar } = useOfficeSidebar()
   const [profile, setProfile] = useState({ name: '' })
   const [stats, setStats] = useState({
     ticketPending: 0,
@@ -99,20 +101,32 @@ function OfficeHome() {
 
   return (
     <MainLayout title="">
-      <div className="office-dashboard fixed-sidebar">
+      <div className={`office-dashboard fixed-sidebar ${isSidebarCollapsed ? 'is-collapsed' : ''}`}>
         <aside className="office-sidebar visible">
           <div className="sidebar-header">
             <span className="sidebar-role">Office Coordinator</span>
+            <button
+              type="button"
+              className="sidebar-toggle"
+              onClick={toggleSidebar}
+              aria-label={isSidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+              title={isSidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            >
+              <i className={`bi ${isSidebarCollapsed ? 'bi-chevron-right' : 'bi-chevron-left'}`} aria-hidden="true" />
+            </button>
           </div>
           <nav className="sidebar-menu">
             {menuItems.map((item) => (
               <button
-                key={item}
+                key={item.label}
                 type="button"
-                className={`sidebar-item ${item === 'Dashboard' ? 'active' : ''}`}
-                onClick={() => handleNavigate(item)}
+                className={`sidebar-item ${item.label === 'Dashboard' ? 'active' : ''}`}
+                onClick={() => handleNavigate(item.label)}
+                aria-label={item.label}
+                title={item.label}
               >
-                {item}
+                <i className={`bi ${item.icon} sidebar-item__icon`} aria-hidden="true" />
+                <span className="sidebar-item__label">{item.label}</span>
               </button>
             ))}
           </nav>
@@ -129,7 +143,9 @@ function OfficeHome() {
             {actionConfig.map((action) => (
               <div key={action.label} className="office-card">
                 <div className="office-card__left">
-                  <span className="office-card__icon">{action.icon}</span>
+                  <span className="office-card__icon">
+                    <i className={`bi ${action.icon}`} aria-hidden="true" />
+                  </span>
                 </div>
                 <div className="office-card__text">
                   <span className="office-card__label">{action.label}</span>

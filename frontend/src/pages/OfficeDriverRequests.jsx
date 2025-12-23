@@ -1,21 +1,23 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import MainLayout from '../components/MainLayout'
+import useOfficeSidebar from '../hooks/useOfficeSidebar'
 
 const menuItems = [
-  'Dashboard',
-  'Ticket Requests',
-  'Driver Requests',
-  'Ticket History',
-  'Driver History',
-  'Travel Accommodation',
-  'Assign Drivers',
-  'Manage User',
-  'Report',
+  { label: 'Dashboard', icon: 'bi-speedometer2' },
+  { label: 'Ticket Requests', icon: 'bi-ticket-perforated' },
+  { label: 'Driver Requests', icon: 'bi-car-front' },
+  { label: 'Ticket History', icon: 'bi-clock-history' },
+  { label: 'Driver History', icon: 'bi-card-list' },
+  { label: 'Travel Accommodation', icon: 'bi-building' },
+  { label: 'Assign Drivers', icon: 'bi-person-check' },
+  { label: 'Manage User', icon: 'bi-people' },
+  { label: 'Report', icon: 'bi-clipboard-data' },
 ]
 
 function OfficeDriverRequests() {
   const navigate = useNavigate()
+  const { collapsed: isSidebarCollapsed, toggle: toggleSidebar } = useOfficeSidebar()
   const [profile, setProfile] = useState({ name: '' })
   const [bookings, setBookings] = useState([])
   const [loading, setLoading] = useState(true)
@@ -254,7 +256,15 @@ function OfficeDriverRequests() {
   const formatDate = (value) => {
     if (!value) return '-'
     const dt = new Date(value)
-    return Number.isNaN(dt.getTime()) ? '-' : dt.toLocaleDateString('id-ID')
+    return Number.isNaN(dt.getTime()) ? '-' : dt.toLocaleDateString('en-GB')
+  }
+
+  const formatTripType = (value) => {
+    if (!value) return '-'
+    if (value === 'antar') return 'Drop-off'
+    if (value === 'jemput') return 'Pick-up'
+    if (value === 'fulltrip') return 'Full Trip'
+    return value
   }
 
   const handleNavigate = (item) => {
@@ -270,20 +280,32 @@ function OfficeDriverRequests() {
 
   return (
     <MainLayout title="">
-      <div className="office-dashboard fixed-sidebar">
+      <div className={`office-dashboard fixed-sidebar ${isSidebarCollapsed ? 'is-collapsed' : ''}`}>
         <aside className="office-sidebar visible">
           <div className="sidebar-header">
             <span className="sidebar-role">Office Coordinator</span>
+            <button
+              type="button"
+              className="sidebar-toggle"
+              onClick={toggleSidebar}
+              aria-label={isSidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+              title={isSidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            >
+              <i className={`bi ${isSidebarCollapsed ? 'bi-chevron-right' : 'bi-chevron-left'}`} aria-hidden="true" />
+            </button>
           </div>
           <nav className="sidebar-menu">
             {menuItems.map((item) => (
               <button
-                key={item}
+                key={item.label}
                 type="button"
-                className={`sidebar-item ${item === 'Driver Requests' ? 'active' : ''}`}
-                onClick={() => handleNavigate(item)}
+                className={`sidebar-item ${item.label === 'Driver Requests' ? 'active' : ''}`}
+                onClick={() => handleNavigate(item.label)}
+                aria-label={item.label}
+                title={item.label}
               >
-                {item}
+                <i className={`bi ${item.icon} sidebar-item__icon`} aria-hidden="true" />
+                <span className="sidebar-item__label">{item.label}</span>
               </button>
             ))}
           </nav>
@@ -349,7 +371,7 @@ function OfficeDriverRequests() {
                         <td>{booking.destination || '-'}</td>
                         <td>{booking.passenger_count ?? '-'}</td>
                         <td>{formatDate(booking.departure_time)}</td>
-                        <td>{booking.trip_type || '-'}</td>
+                        <td>{formatTripType(booking.trip_type)}</td>
                         <td>
                           <span className={`status-badge status-${statusValue}`}>{booking.status || 'pending'}</span>
                         </td>

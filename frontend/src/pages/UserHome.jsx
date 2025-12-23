@@ -108,21 +108,27 @@ function UserHome() {
         <section className="stats-section">
           <div className="stats-grid">
             <article className="stat-card">
-              <div className="stat-icon stat-icon-blue">T</div>
+              <div className="stat-icon stat-icon-blue" aria-hidden="true">
+                <i className="bi bi-ticket-perforated" />
+              </div>
               <div>
                 <p className="stat-label">Pending Tickets</p>
                 <p className="stat-value">{stats.ticketPending}</p>
               </div>
             </article>
             <article className="stat-card">
-              <div className="stat-icon stat-icon-green">D</div>
+              <div className="stat-icon stat-icon-green" aria-hidden="true">
+                <i className="bi bi-car-front" />
+              </div>
               <div>
                 <p className="stat-label">Pending Bookings</p>
                 <p className="stat-value">{stats.bookingPending}</p>
               </div>
             </article>
             <article className="stat-card">
-              <div className="stat-icon stat-icon-amber">B</div>
+              <div className="stat-icon stat-icon-amber" aria-hidden="true">
+                <i className="bi bi-activity" />
+              </div>
               <div>
                 <p className="stat-label">Active Bookings</p>
                 <p className="stat-value">{stats.bookingActive}</p>
@@ -133,7 +139,9 @@ function UserHome() {
 
         <section className="menu-section">
           <div className="section-heading">
-            <div className="heading-icon">#</div>
+            <div className="heading-icon" aria-hidden="true">
+              <i className="bi bi-grid-3x3-gap-fill" />
+            </div>
             <div>
               <h2>Main Menu</h2>
               <p className="muted">Choose the service you need</p>
@@ -148,7 +156,9 @@ function UserHome() {
               onClick={handleTicketRequest}
               onKeyDown={(event) => handleCardKeyDown(event, handleTicketRequest)}
             >
-              <div className="action-icon">+</div>
+              <div className="action-icon" aria-hidden="true">
+                <i className="bi bi-plus-lg" />
+              </div>
               <div className="action-content">
                 <h3>Make a Ticket Request</h3>
                 <p className="muted">Submit a ticket request for business or travel needs</p>
@@ -165,7 +175,9 @@ function UserHome() {
               onClick={handleBookingDriver}
               onKeyDown={(event) => handleCardKeyDown(event, handleBookingDriver)}
             >
-              <div className="action-icon">+</div>
+              <div className="action-icon" aria-hidden="true">
+                <i className="bi bi-plus-lg" />
+              </div>
               <div className="action-content">
                 <h3>Book a Driver</h3>
                 <p className="muted">Request a driver for business travel or operational needs</p>
@@ -182,7 +194,9 @@ function UserHome() {
               onClick={handleTicketHistory}
               onKeyDown={(event) => handleCardKeyDown(event, handleTicketHistory)}
             >
-              <div className="action-icon icon-soft">T</div>
+              <div className="action-icon icon-soft" aria-hidden="true">
+                <i className="bi bi-ticket-perforated" />
+              </div>
               <div className="action-content">
                 <h3>Ticket History</h3>
                 <p className="muted">View all your ticket requests</p>
@@ -199,7 +213,9 @@ function UserHome() {
               onClick={handleBookingHistory}
               onKeyDown={(event) => handleCardKeyDown(event, handleBookingHistory)}
             >
-              <div className="action-icon icon-soft">D</div>
+              <div className="action-icon icon-soft" aria-hidden="true">
+                <i className="bi bi-car-front" />
+              </div>
               <div className="action-content">
                 <h3>Driver History</h3>
                 <p className="muted">View all your driver bookings</p>

@@ -121,13 +121,13 @@ function TicketHistory() {
   const formatDate = (value) => {
     const date = toDate(value)
     if (!date) return '-'
-    return date.toLocaleDateString('id-ID')
+    return date.toLocaleDateString('en-GB')
   }
 
   const formatDateTime = (dateValue, timeValue) => {
     const date = toDate(dateValue)
     if (!date) return '-'
-    const base = date.toLocaleDateString('id-ID')
+    const base = date.toLocaleDateString('en-GB')
     if (timeValue) {
       return `${base} ${timeValue}`
     }
@@ -151,8 +151,8 @@ function TicketHistory() {
           </button>
           <div>
             <p className="eyebrow">Ticket History</p>
-            <h1>Riwayat Pengajuan Tiket</h1>
-            <p className="muted">Lihat status semua permintaan perjalanan kamu</p>
+            <h1>Ticket Request History</h1>
+            <p className="muted">Track the status of all your travel ticket requests</p>
           </div>
         </header>
 
@@ -168,7 +168,7 @@ function TicketHistory() {
                   <tr>
                     <th>Submission Date</th>
                     <th>Name</th>
-                    <th>NIK</th>
+                    <th>National ID</th>
                     <th>Dept/Job Position</th>
                     <th>Phone</th>
                     <th>Email</th>
@@ -190,7 +190,7 @@ function TicketHistory() {
                   {tickets.length === 0 ? (
                     <tr>
                       <td colSpan="18" className="muted">
-                        Belum ada pengajuan tiket.
+                        No ticket requests yet.
                       </td>
                     </tr>
                   ) : (
