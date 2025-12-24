@@ -3,17 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import MainLayout from '../components/MainLayout'
 import useOfficeSidebar from '../hooks/useOfficeSidebar'
 
-const menuItems = [
-  { label: 'Dashboard', icon: 'bi-speedometer2' },
-  { label: 'Ticket Requests', icon: 'bi-ticket-perforated' },
-  { label: 'Driver Requests', icon: 'bi-car-front' },
-  { label: 'Ticket History', icon: 'bi-clock-history' },
-  { label: 'Driver History', icon: 'bi-card-list' },
-  { label: 'Travel Accommodation', icon: 'bi-building' },
-  { label: 'Assign Drivers', icon: 'bi-person-check' },
-  { label: 'Manage User', icon: 'bi-people' },
-  { label: 'Report', icon: 'bi-clipboard-data' },
-]
+const menuItems = [{ label: 'Manage User', icon: 'bi-people' }]
 
 const initialCreate = {
   name: '',
@@ -25,9 +15,11 @@ const initialCreate = {
   password: '',
 }
 
-function OfficeManageUser() {
+function AdminManageUser() {
   const navigate = useNavigate()
   const { collapsed: isSidebarCollapsed, toggle: toggleSidebar } = useOfficeSidebar()
+  const [currentUid, setCurrentUid] = useState('')
+
   const [users, setUsers] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -59,15 +51,23 @@ function OfficeManageUser() {
 
   const token = localStorage.getItem('authToken')
 
-  const handleNavigate = (item) => {
-    if (item === 'Dashboard') navigate('/office/home')
-    if (item === 'Ticket Requests') navigate('/office/ticket-requests')
-    if (item === 'Driver Requests') navigate('/office/driver-requests')
-    if (item === 'Ticket History') navigate('/office/ticket-history')
-    if (item === 'Driver History') navigate('/office/driver-history')
-    if (item === 'Travel Accommodation') navigate('/office/travel-accommodation')
-    if (item === 'Assign Drivers') navigate('/office/assign-drivers')
-    if (item === 'Manage User') navigate('/office/manage-user')
+  const handleNavigate = () => {
+    navigate('/admin/manage-user')
+  }
+
+  const loadMe = async () => {
+    if (!token) return
+
+    try {
+      const res = await fetch('http://localhost:8000/users/me', {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (!res.ok) return
+      const data = await res.json()
+      if (data?.uid) setCurrentUid(data.uid)
+    } catch {
+      // ignore
+    }
   }
 
   const loadUsers = async () => {
@@ -106,6 +106,7 @@ function OfficeManageUser() {
   }
 
   useEffect(() => {
+    loadMe()
     loadUsers()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -183,18 +184,13 @@ function OfficeManageUser() {
     setSuccessModal(null)
 
     try {
-      const updatePayload = { ...editForm }
-      if (selectedUser?.role && !['user', 'driver'].includes(selectedUser.role)) {
-        delete updatePayload.role
-      }
-
       const res = await fetch(`http://localhost:8000/users/${selectedUser.uid}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(updatePayload),
+        body: JSON.stringify(editForm),
       })
       if (!res.ok) {
         let detail = 'Failed to update user.'
@@ -257,12 +253,56 @@ function OfficeManageUser() {
     }
   }
 
+  const handleDelete = async (user) => {
+    if (!token || !user?.uid) return
+
+    const confirmed = window.confirm(
+      `Delete this account permanently?\n\nThis will remove the user from Firebase Auth.\n\n${user.email || user.name || user.uid}`
+    )
+    if (!confirmed) return
+
+    setActionLoadingId(user.uid)
+    setActionError('')
+    setActionSuccess('')
+    setSuccessModal(null)
+
+    try {
+      const res = await fetch(`http://localhost:8000/users/${user.uid}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      })
+
+      if (!res.ok) {
+        let detail = 'Failed to delete user.'
+        try {
+          const data = await res.json()
+          if (data?.detail) detail = data.detail
+        } catch {
+          // ignore parse error
+        }
+        setActionError(detail)
+        return
+      }
+
+      setSuccessModal({
+        mode: 'delete',
+        title: 'Account Deleted',
+        message: 'User account was deleted successfully.',
+      })
+      await loadUsers()
+    } catch (err) {
+      setActionError('Network error. Please try again.')
+    } finally {
+      setActionLoadingId('')
+    }
+  }
+
   return (
     <MainLayout title="">
       <div className={`office-dashboard fixed-sidebar ${isSidebarCollapsed ? 'is-collapsed' : ''}`}>
         <aside className="office-sidebar visible">
           <div className="sidebar-header">
-            <span className="sidebar-role">Office Coordinator</span>
+            <span className="sidebar-role">Super Admin</span>
             <button
               type="button"
               className="sidebar-toggle"
@@ -274,17 +314,17 @@ function OfficeManageUser() {
             </button>
           </div>
           <nav className="sidebar-menu">
-            {menuItems.map((item) => (
+            {menuItems.map((menuItem) => (
               <button
-                key={item.label}
+                key={menuItem.label}
                 type="button"
-                className={`sidebar-item ${item.label === 'Manage User' ? 'active' : ''}`}
-                onClick={() => handleNavigate(item.label)}
-                aria-label={item.label}
-                title={item.label}
+                className="sidebar-item active"
+                onClick={handleNavigate}
+                aria-label={menuItem.label}
+                title={menuItem.label}
               >
-                <i className={`bi ${item.icon} sidebar-item__icon`} aria-hidden="true" />
-                <span className="sidebar-item__label">{item.label}</span>
+                <i className={`bi ${menuItem.icon} sidebar-item__icon`} aria-hidden="true" />
+                <span className="sidebar-item__label">{menuItem.label}</span>
               </button>
             ))}
           </nav>
@@ -294,37 +334,32 @@ function OfficeManageUser() {
           <header className="office-header">
             <p className="eyebrow">Manage User</p>
             <h1>Manage Users</h1>
-            <p className="muted">Create new accounts and update existing user profiles</p>
+            <p className="muted">Create, update, deactivate, or delete accounts</p>
           </header>
 
-          {actionSuccess ? <p className="success-text">{actionSuccess}</p> : null}
-          {actionError ? <p className="error-text">{actionError}</p> : null}
-
-          <div className="form-actions">
-            <button type="button" className="btn btn-primary" onClick={() => setShowCreate((v) => !v)}>
+          <div className="office-toolbar">
+            <button type="button" className="btn btn-primary" onClick={() => setShowCreate((prev) => !prev)}>
               {showCreate ? 'Close Create Form' : 'Create Account'}
             </button>
           </div>
 
           {showCreate ? (
-            <form className="ticket-form" onSubmit={handleCreate}>
-              <section className="field-group">
-                <div className="field-heading">
-                  <div className="heading-icon">+</div>
+            <form className="office-form" onSubmit={handleCreate}>
+              <section className="office-form__section">
+                <div className="form-section-title">
+                  <span className="form-section-icon" aria-hidden="true">
+                    <i className="bi bi-plus-lg" />
+                  </span>
                   <div>
                     <h2>Create Account</h2>
                     <p className="muted">Create a new Firebase account and user profile</p>
                   </div>
                 </div>
-                <div className="field-grid">
+
+                <div className="form-grid">
                   <label className="inline-label">
                     <span>User Name</span>
-                    <input
-                      placeholder="User Name"
-                      value={createForm.name}
-                      onChange={handleCreateChange('name')}
-                      required
-                    />
+                    <input placeholder="User Name" value={createForm.name} onChange={handleCreateChange('name')} required />
                   </label>
                   <label className="inline-label">
                     <span>User Dept/Job Position</span>
@@ -340,16 +375,13 @@ function OfficeManageUser() {
                     <select value={createForm.role} onChange={handleCreateChange('role')} required>
                       <option value="user">user</option>
                       <option value="driver">driver</option>
+                      <option value="office_coordinator">office_coordinator</option>
+                      <option value="superadmin">superadmin</option>
                     </select>
                   </label>
                   <label className="inline-label">
                     <span>National ID</span>
-                    <input
-                      placeholder="National ID"
-                      value={createForm.nik}
-                      onChange={handleCreateChange('nik')}
-                      required
-                    />
+                    <input placeholder="National ID" value={createForm.nik} onChange={handleCreateChange('nik')} required />
                   </label>
                   <label className="inline-label">
                     <span>Phone</span>
@@ -384,22 +416,30 @@ function OfficeManageUser() {
                 <button type="submit" className="btn btn-primary" disabled={createLoading}>
                   {createLoading ? 'Creating...' : 'Create'}
                 </button>
+                <button type="button" className="btn btn-outline-danger" onClick={() => setShowCreate(false)}>
+                  Cancel
+                </button>
               </div>
             </form>
           ) : null}
 
+          {actionSuccess ? <p className="success-text">{actionSuccess}</p> : null}
+          {actionError ? <p className="error-text">{actionError}</p> : null}
+
           {selectedUser && editForm ? (
-            <form className="ticket-form" onSubmit={handleUpdate}>
-              <section className="field-group">
-                <div className="field-heading">
-                  <div className="heading-icon" aria-hidden="true">
+            <form className="office-form" onSubmit={handleUpdate}>
+              <section className="office-form__section">
+                <div className="form-section-title">
+                  <span className="form-section-icon" aria-hidden="true">
                     <i className="bi bi-pencil-square" />
-                  </div>
+                  </span>
                   <div>
                     <h2>Edit User</h2>
+                    <p className="muted">Update user profile</p>
                   </div>
                 </div>
-                <div className="field-grid">
+
+                <div className="form-grid">
                   <label className="inline-label">
                     <span>User Name</span>
                     <input placeholder="User Name" value={editForm.name} onChange={handleEditChange('name')} required />
@@ -415,17 +455,11 @@ function OfficeManageUser() {
                   </label>
                   <label className="inline-label">
                     <span>Role</span>
-                    <select
-                      value={editForm.role}
-                      onChange={handleEditChange('role')}
-                      disabled={selectedUser?.role && !['user', 'driver'].includes(selectedUser.role)}
-                      required
-                    >
+                    <select value={editForm.role} onChange={handleEditChange('role')} required>
                       <option value="user">user</option>
                       <option value="driver">driver</option>
-                      {selectedUser?.role && !['user', 'driver'].includes(selectedUser.role) ? (
-                        <option value={selectedUser.role}>{selectedUser.role}</option>
-                      ) : null}
+                      <option value="office_coordinator">office_coordinator</option>
+                      <option value="superadmin">superadmin</option>
                     </select>
                   </label>
                   <label className="inline-label">
@@ -438,13 +472,7 @@ function OfficeManageUser() {
                   </label>
                   <label className="inline-label">
                     <span>Email</span>
-                    <input
-                      type="email"
-                      placeholder="Email"
-                      value={editForm.email}
-                      onChange={handleEditChange('email')}
-                      required
-                    />
+                    <input type="email" placeholder="Email" value={editForm.email} onChange={handleEditChange('email')} required />
                   </label>
                 </div>
               </section>
@@ -505,10 +533,7 @@ function OfficeManageUser() {
                   </tr>
                 ) : (
                   pagedUsers.map((user) => (
-                    <tr
-                      key={user.uid}
-                      style={{ background: selectedUser?.uid === user.uid ? 'var(--brand-soft)' : undefined }}
-                    >
+                    <tr key={user.uid} style={{ background: selectedUser?.uid === user.uid ? 'var(--brand-soft)' : undefined }}>
                       <td>{user.name || '-'}</td>
                       <td>{user.dept_job_position || '-'}</td>
                       <td>{user.role || '-'}</td>
@@ -537,6 +562,15 @@ function OfficeManageUser() {
                           ) : (
                             <span className="status-badge status-cancelled">Deactivated</span>
                           )}
+                          <button
+                            type="button"
+                            className="btn btn-outline-danger"
+                            disabled={actionLoadingId === user.uid || user.uid === currentUid}
+                            onClick={() => handleDelete(user)}
+                            title={user.uid === currentUid ? 'You cannot delete your own account' : 'Delete'}
+                          >
+                            Delete
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -610,7 +644,7 @@ function OfficeManageUser() {
                           setEditError('')
                         }}
                       >
-                        Close Editor
+                        Close
                       </button>
                     </>
                   )}
@@ -624,4 +658,5 @@ function OfficeManageUser() {
   )
 }
 
-export default OfficeManageUser
+export default AdminManageUser
+

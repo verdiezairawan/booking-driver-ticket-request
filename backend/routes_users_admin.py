@@ -1,6 +1,6 @@
 from typing import Literal, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 from firebase_admin import auth as firebase_auth
 from firebase_admin import firestore
 from pydantic import BaseModel, Field
@@ -88,7 +88,10 @@ def list_users(current_user=Depends(get_current_user)):
 @router.post("", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 def create_user(payload: UserCreate, current_user=Depends(get_current_user)):
     uid = current_user["uid"]
-    ensure_role(uid, ("office_coordinator", "superadmin"))
+    current_role = ensure_role(uid, ("office_coordinator", "superadmin"))
+
+    if current_role == "office_coordinator" and payload.role not in ("user", "driver"):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
 
     try:
         user_record = firebase_auth.create_user(email=payload.email, password=payload.password)
@@ -118,14 +121,33 @@ def create_user(payload: UserCreate, current_user=Depends(get_current_user)):
 @router.patch("/{user_id}", response_model=UserResponse)
 def update_user(user_id: str, payload: UserUpdate, current_user=Depends(get_current_user)):
     uid = current_user["uid"]
-    ensure_role(uid, ("office_coordinator", "superadmin"))
+    current_role = ensure_role(uid, ("office_coordinator", "superadmin"))
 
     doc_ref = db.collection("users").document(user_id)
     snapshot = doc_ref.get()
     if not snapshot.exists:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User profile not found")
 
+    target_data = snapshot.to_dict() or {}
+    if target_data.get("role") == "superadmin" and current_role != "superadmin":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
+
     updates = payload.model_dump(exclude_none=True)
+    if not updates:
+        return serialize_user(snapshot)
+
+    if current_role == "office_coordinator" and "role" in updates:
+        target_role = target_data.get("role")
+        next_role = updates.get("role")
+
+        if next_role not in ("user", "driver"):
+            if next_role == target_role:
+                updates.pop("role", None)
+            else:
+                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
+        elif target_role not in ("user", "driver") and next_role != target_role:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
+
     if not updates:
         return serialize_user(snapshot)
 
@@ -176,3 +198,24 @@ def deactivate_user(user_id: str, current_user=Depends(get_current_user)):
 
     updated_snapshot = doc_ref.get()
     return serialize_user(updated_snapshot)
+
+
+@router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_user(user_id: str, current_user=Depends(get_current_user)):
+    uid = current_user["uid"]
+    ensure_role(uid, ("superadmin",))
+
+    if user_id == uid:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cannot delete your own account")
+
+    try:
+        firebase_auth.delete_user(user_id)
+    except firebase_auth.UserNotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User account not found") from exc
+    except Exception as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Failed to delete user account") from exc
+
+    doc_ref = db.collection("users").document(user_id)
+    doc_ref.delete()
+
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

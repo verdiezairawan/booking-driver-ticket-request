@@ -3,7 +3,6 @@ import Login from './pages/Login'
 import UserHome from './pages/UserHome'
 import DriverHome from './pages/DriverHome'
 import OfficeHome from './pages/OfficeHome'
-import AdminHome from './pages/AdminHome'
 import TicketRequest from './pages/TicketRequest'
 import TicketHistory from './pages/TicketHistory'
 import BookingDriver from './pages/BookingDriver'
@@ -15,6 +14,7 @@ import OfficeDriverHistory from './pages/OfficeDriverHistory'
 import OfficeTravelAccommodation from './pages/OfficeTravelAccommodation'
 import OfficeAssignDrivers from './pages/OfficeAssignDrivers'
 import OfficeManageUser from './pages/OfficeManageUser'
+import AdminManageUser from './pages/AdminManageUser'
 import ProtectedRoute from './components/ProtectedRoute'
 import './App.css'
 
@@ -140,7 +140,15 @@ function App() {
             path="/admin/home"
             element={
               <ProtectedRoute>
-                <AdminHome />
+                <AdminManageUser />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/manage-user"
+            element={
+              <ProtectedRoute>
+                <AdminManageUser />
               </ProtectedRoute>
             }
           />
