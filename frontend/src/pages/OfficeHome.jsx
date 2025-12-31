@@ -5,18 +5,17 @@ import useOfficeSidebar from '../hooks/useOfficeSidebar'
 
 const menuItems = [
   { label: 'Dashboard', icon: 'bi-speedometer2' },
-  { label: 'Ticket Requests', icon: 'bi-ticket-perforated' },
+  { label: 'Travel Accommodation Requests', icon: 'bi-ticket-perforated' },
   { label: 'Driver Requests', icon: 'bi-car-front' },
-  { label: 'Ticket History', icon: 'bi-clock-history' },
+  { label: 'Travel Accommodation History', icon: 'bi-clock-history' },
   { label: 'Driver History', icon: 'bi-card-list' },
   { label: 'Travel Accommodation', icon: 'bi-building' },
   { label: 'Assign Drivers', icon: 'bi-person-check' },
   { label: 'Manage User', icon: 'bi-people' },
-  { label: 'Report', icon: 'bi-clipboard-data' },
 ]
 
 const actionConfig = [
-  { label: 'Pending Tickets', type: 'ticketPending', icon: 'bi-ticket-perforated-fill' },
+  { label: 'Pending Travel', type: 'ticketPending', icon: 'bi-ticket-perforated-fill' },
   { label: 'Approved Travel', type: 'ticketApproved', icon: 'bi-check-circle-fill' },
   { label: 'Rejected Travel', type: 'ticketRejected', icon: 'bi-x-circle-fill' },
   { label: 'Pending Bookings', type: 'bookingPending', icon: 'bi-car-front-fill' },
@@ -90,9 +89,9 @@ function OfficeHome() {
 
   const handleNavigate = (item) => {
     if (item === 'Dashboard') navigate('/office/home')
-    if (item === 'Ticket Requests') navigate('/office/ticket-requests')
+    if (item === 'Travel Accommodation Requests') navigate('/office/ticket-requests')
     if (item === 'Driver Requests') navigate('/office/driver-requests')
-    if (item === 'Ticket History') navigate('/office/ticket-history')
+    if (item === 'Travel Accommodation History') navigate('/office/ticket-history')
     if (item === 'Driver History') navigate('/office/driver-history')
     if (item === 'Travel Accommodation') navigate('/office/travel-accommodation')
     if (item === 'Assign Drivers') navigate('/office/assign-drivers')

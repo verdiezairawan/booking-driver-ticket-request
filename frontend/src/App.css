@@ -243,7 +243,7 @@
 .dashboard-header h1 {
   margin: 4px 0;
   font-size: 28px;
-  color: var(--brand-bold);
+  color: #111827;
 }
 
 .eyebrow {
@@ -334,7 +334,7 @@
   margin: 2px 0 0;
   font-size: 22px;
   font-weight: 700;
-  color: var(--brand-bold);
+  color: #111827;
 }
 
 .menu-section {
@@ -364,7 +364,7 @@
 
 .menu-section h2 {
   margin: 0;
-  color: var(--brand-bold);
+  color: #111827;
 }
 
 .actions-grid {
@@ -440,7 +440,7 @@
 
 .action-content h3 {
   margin: 0 0 6px 0;
-  color: var(--brand-bold);
+  color: #111827;
 }
 
 .action-content p {
@@ -451,13 +451,13 @@
   padding: 0;
   background: none;
   border: none;
-  color: var(--brand-bold);
+  color: #111827;
   font-weight: 600;
   cursor: pointer;
 }
 
 .link-cta.success {
-  color: var(--brand-bold);
+  color: #111827;
 }
 
 @media (max-width: 768px) {
@@ -841,7 +841,7 @@
 }
 
 .calendar-cell.is-today .calendar-date {
-  color: var(--brand-bold);
+  color: #111827;
   border: 2px solid var(--brand-bold);
   background-color: #ffffff;
 }
@@ -885,7 +885,7 @@
 
 .driver-header h1 {
   margin: 4px 0;
-  color: var(--brand-bold);
+  color: #111827;
 }
 
 .driver-tabs {
@@ -906,7 +906,7 @@
 
 .driver-tab.active {
   border-color: var(--brand-bold);
-  color: var(--brand-bold);
+  color: #111827;
   background-color: var(--brand-soft);
 }
 
@@ -920,7 +920,7 @@
 
 .driver-empty h2 {
   margin: 0 0 6px 0;
-  color: var(--brand-bold);
+  color: #111827;
 }
 
 .driver-list {
@@ -943,7 +943,7 @@
 .driver-route {
   margin: 0;
   font-size: 18px;
-  color: var(--brand-bold);
+  color: #111827;
 }
 
 .driver-subrow {
@@ -1167,7 +1167,7 @@
   justify-content: space-between;
   padding: 16px 16px 12px;
   font-weight: 700;
-  color: var(--brand-bold);
+  color: #111827;
   border-bottom: 1px solid #e5e7eb;
 }
 
@@ -1185,7 +1185,7 @@
   border: none;
   font-size: 18px;
   cursor: pointer;
-  color: var(--brand-bold);
+  color: #111827;
   padding: 6px 8px;
   border-radius: 10px;
   line-height: 1;
@@ -1213,7 +1213,7 @@
   border-bottom: 1px solid #e2e8f0;
   cursor: pointer;
   font-weight: 700;
-  color: var(--brand-bold);
+  color: #111827;
   transition: background-color 0.15s ease, color 0.15s ease;
 }
 
@@ -1233,7 +1233,7 @@
 .sidebar-item:hover,
 .sidebar-item.active {
   background-color: var(--brand-soft);
-  color: var(--brand-bold);
+  color: #111827;
 }
 
 .office-content {
@@ -1250,7 +1250,7 @@
 
 .office-header h1 {
   margin: 4px 0;
-  color: var(--brand-bold);
+  color: #111827;
 }
 
 .office-actions {
@@ -1291,7 +1291,7 @@
 .office-card__countPlain {
   font-size: 20px;
   font-weight: 800;
-  color: var(--brand-bold);
+  color: #111827;
 }
 
 .office-card__icon {
@@ -1419,7 +1419,7 @@
 
 .modal-header h2 {
   margin: 0;
-  color: var(--brand-bold);
+  color: #111827;
 }
 
 .modal-close {
@@ -1490,7 +1490,7 @@
 .success-modal-title {
   margin: 0;
   font-size: 32px;
-  color: var(--brand-bold);
+  color: #111827;
 }
 
 .success-modal-message {
@@ -1647,6 +1647,14 @@
 
   .office-dashboard.is-collapsed {
     grid-template-columns: 1fr;
+  }
+
+  .office-dashboard.is-collapsed .sidebar-menu {
+    display: none;
+  }
+
+  .sidebar-toggle i {
+    transform: rotate(90deg);
   }
 
   .office-sidebar {

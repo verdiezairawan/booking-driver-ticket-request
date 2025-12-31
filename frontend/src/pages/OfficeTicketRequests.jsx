@@ -5,14 +5,13 @@ import useOfficeSidebar from '../hooks/useOfficeSidebar'
 
 const menuItems = [
   { label: 'Dashboard', icon: 'bi-speedometer2' },
-  { label: 'Ticket Requests', icon: 'bi-ticket-perforated' },
+  { label: 'Travel Accommodation Requests', icon: 'bi-ticket-perforated' },
   { label: 'Driver Requests', icon: 'bi-car-front' },
-  { label: 'Ticket History', icon: 'bi-clock-history' },
+  { label: 'Travel Accommodation History', icon: 'bi-clock-history' },
   { label: 'Driver History', icon: 'bi-card-list' },
   { label: 'Travel Accommodation', icon: 'bi-building' },
   { label: 'Assign Drivers', icon: 'bi-person-check' },
   { label: 'Manage User', icon: 'bi-people' },
-  { label: 'Report', icon: 'bi-clipboard-data' },
 ]
 
 function OfficeTicketRequests() {
@@ -129,9 +128,9 @@ function OfficeTicketRequests() {
 
   const handleNavigate = (item) => {
     if (item === 'Dashboard') navigate('/office/home')
-    if (item === 'Ticket Requests') navigate('/office/ticket-requests')
+    if (item === 'Travel Accommodation Requests') navigate('/office/ticket-requests')
     if (item === 'Driver Requests') navigate('/office/driver-requests')
-    if (item === 'Ticket History') navigate('/office/ticket-history')
+    if (item === 'Travel Accommodation History') navigate('/office/ticket-history')
     if (item === 'Driver History') navigate('/office/driver-history')
     if (item === 'Travel Accommodation') navigate('/office/travel-accommodation')
     if (item === 'Assign Drivers') navigate('/office/assign-drivers')
@@ -173,8 +172,8 @@ function OfficeTicketRequests() {
 
         <section className="office-content">
           <header className="office-header">
-            <p className="eyebrow">List of all ticket requests</p>
-            <h1>Ticket Requests</h1>
+            <p className="eyebrow">List of all Travel Accommodation requests</p>
+            <h1>Travel Accommodation Requests</h1>
             <p className="muted">Manage ticket approvals and assignments</p>
           </header>
 
@@ -186,6 +185,7 @@ function OfficeTicketRequests() {
               <thead>
                 <tr>
                   <th>Name</th>
+                  <th>User Dept/Job Position</th>
                   <th>Phone</th>
                   <th>Email</th>
                   <th>National ID</th>
@@ -208,19 +208,19 @@ function OfficeTicketRequests() {
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan="18" className="muted">
+                    <td colSpan="19" className="muted">
                       Loading...
                     </td>
                   </tr>
                 ) : error ? (
                   <tr>
-                    <td colSpan="18" className="error-text">
+                    <td colSpan="19" className="error-text">
                       {error}
                     </td>
                   </tr>
                 ) : tickets.length === 0 ? (
                   <tr>
-                    <td colSpan="18" className="muted">
+                    <td colSpan="19" className="muted">
                       No ticket requests found.
                     </td>
                   </tr>
@@ -228,6 +228,7 @@ function OfficeTicketRequests() {
                   pagedTickets.map((ticket) => (
                     <tr key={ticket.id}>
                       <td>{ticket.full_name || '-'}</td>
+                      <td>{ticket.dept_job_position || '-'}</td>
                       <td>{ticket.phone_number || '-'}</td>
                       <td>{ticket.email || '-'}</td>
                       <td>{ticket.national_id || '-'}</td>

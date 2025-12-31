@@ -337,26 +337,24 @@ function AdminManageUser() {
             <p className="muted">Create, update, deactivate, or delete accounts</p>
           </header>
 
-          <div className="office-toolbar">
+          <div className="form-actions">
             <button type="button" className="btn btn-primary" onClick={() => setShowCreate((prev) => !prev)}>
               {showCreate ? 'Close Create Form' : 'Create Account'}
             </button>
           </div>
 
           {showCreate ? (
-            <form className="office-form" onSubmit={handleCreate}>
-              <section className="office-form__section">
-                <div className="form-section-title">
-                  <span className="form-section-icon" aria-hidden="true">
-                    <i className="bi bi-plus-lg" />
-                  </span>
+            <form className="ticket-form" onSubmit={handleCreate}>
+              <section className="field-group">
+                <div className="field-heading">
+                  <div className="heading-icon">+</div>
                   <div>
                     <h2>Create Account</h2>
                     <p className="muted">Create a new Firebase account and user profile</p>
                   </div>
                 </div>
 
-                <div className="form-grid">
+                <div className="field-grid">
                   <label className="inline-label">
                     <span>User Name</span>
                     <input placeholder="User Name" value={createForm.name} onChange={handleCreateChange('name')} required />
@@ -659,4 +657,3 @@ function AdminManageUser() {
 }
 
 export default AdminManageUser
-

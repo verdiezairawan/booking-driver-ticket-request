@@ -5,14 +5,13 @@ import useOfficeSidebar from '../hooks/useOfficeSidebar'
 
 const menuItems = [
   { label: 'Dashboard', icon: 'bi-speedometer2' },
-  { label: 'Ticket Requests', icon: 'bi-ticket-perforated' },
+  { label: 'Travel Accommodation Requests', icon: 'bi-ticket-perforated' },
   { label: 'Driver Requests', icon: 'bi-car-front' },
-  { label: 'Ticket History', icon: 'bi-clock-history' },
+  { label: 'Travel Accommodation History', icon: 'bi-clock-history' },
   { label: 'Driver History', icon: 'bi-card-list' },
   { label: 'Travel Accommodation', icon: 'bi-building' },
   { label: 'Assign Drivers', icon: 'bi-person-check' },
   { label: 'Manage User', icon: 'bi-people' },
-  { label: 'Report', icon: 'bi-clipboard-data' },
 ]
 
 function OfficeDriverRequests() {
@@ -269,9 +268,9 @@ function OfficeDriverRequests() {
 
   const handleNavigate = (item) => {
     if (item === 'Dashboard') navigate('/office/home')
-    if (item === 'Ticket Requests') navigate('/office/ticket-requests')
+    if (item === 'Travel Accommodation Requests') navigate('/office/ticket-requests')
     if (item === 'Driver Requests') navigate('/office/driver-requests')
-    if (item === 'Ticket History') navigate('/office/ticket-history')
+    if (item === 'Travel Accommodation History') navigate('/office/ticket-history')
     if (item === 'Driver History') navigate('/office/driver-history')
     if (item === 'Travel Accommodation') navigate('/office/travel-accommodation')
     if (item === 'Assign Drivers') navigate('/office/assign-drivers')
@@ -326,6 +325,7 @@ function OfficeDriverRequests() {
               <thead>
                 <tr>
                   <th>Name</th>
+                  <th>User Dept/Job Position</th>
                   <th>Phone</th>
                   <th>Email</th>
                   <th>National ID</th>
@@ -341,19 +341,19 @@ function OfficeDriverRequests() {
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan="11" className="muted">
+                    <td colSpan="12" className="muted">
                       Loading...
                     </td>
                   </tr>
                 ) : error ? (
                   <tr>
-                    <td colSpan="11" className="error-text">
+                    <td colSpan="12" className="error-text">
                       {error}
                     </td>
                   </tr>
                 ) : bookings.length === 0 ? (
                   <tr>
-                    <td colSpan="11" className="muted">
+                    <td colSpan="12" className="muted">
                       No driver requests found.
                     </td>
                   </tr>
@@ -364,6 +364,7 @@ function OfficeDriverRequests() {
                     return (
                       <tr key={booking.id}>
                         <td>{booking.requester_name || '-'}</td>
+                        <td>{booking.requester_dept_job_position || '-'}</td>
                         <td>{booking.requester_phone || '-'}</td>
                         <td>{booking.requester_email || '-'}</td>
                         <td>{booking.requester_nik || '-'}</td>

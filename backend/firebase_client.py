@@ -2,7 +2,7 @@ import firebase_admin
 from firebase_admin import credentials, firestore, auth
 import os
 
-# Bisa pakai env variable untuk path file service account
+
 SERVICE_ACCOUNT_PATH = os.getenv("FIREBASE_SERVICE_ACCOUNT", "bdtrex-development-firebase-adminsdk.json")
 
 if not firebase_admin._apps:

@@ -12,7 +12,6 @@ const menuItems = [
   { label: 'Travel Accommodation', icon: 'bi-building' },
   { label: 'Assign Drivers', icon: 'bi-person-check' },
   { label: 'Manage User', icon: 'bi-people' },
-  { label: 'Report', icon: 'bi-clipboard-data' },
 ]
 
 const actionConfig = [

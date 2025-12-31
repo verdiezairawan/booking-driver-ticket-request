@@ -112,7 +112,7 @@ function UserHome() {
                 <i className="bi bi-ticket-perforated" />
               </div>
               <div>
-                <p className="stat-label">Pending Tickets</p>
+                <p className="stat-label">Pending Travel</p>
                 <p className="stat-value">{stats.ticketPending}</p>
               </div>
             </article>
@@ -160,8 +160,8 @@ function UserHome() {
                 <i className="bi bi-plus-lg" />
               </div>
               <div className="action-content">
-                <h3>Make a Ticket Request</h3>
-                <p className="muted">Submit a ticket request for business or travel needs</p>
+                <h3>Make a Travel Accommodation Request</h3>
+                <p className="muted">Submit a request for business or travel needs</p>
                 <span className="link-cta">
                   Make Request <span aria-hidden="true">&rarr;</span>
                 </span>
@@ -198,8 +198,8 @@ function UserHome() {
                 <i className="bi bi-ticket-perforated" />
               </div>
               <div className="action-content">
-                <h3>Ticket History</h3>
-                <p className="muted">View all your ticket requests</p>
+                <h3>Travel Accommodation History</h3>
+                <p className="muted">View all your Travel Accommodation requests</p>
                 <span className="link-cta">
                   View <span aria-hidden="true">&rarr;</span>
                 </span>

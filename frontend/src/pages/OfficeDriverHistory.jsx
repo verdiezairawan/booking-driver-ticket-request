@@ -5,14 +5,13 @@ import useOfficeSidebar from '../hooks/useOfficeSidebar'
 
 const menuItems = [
   { label: 'Dashboard', icon: 'bi-speedometer2' },
-  { label: 'Ticket Requests', icon: 'bi-ticket-perforated' },
+  { label: 'Travel Accommodation Requests', icon: 'bi-ticket-perforated' },
   { label: 'Driver Requests', icon: 'bi-car-front' },
-  { label: 'Ticket History', icon: 'bi-clock-history' },
+  { label: 'Travel Accommodation History', icon: 'bi-clock-history' },
   { label: 'Driver History', icon: 'bi-card-list' },
   { label: 'Travel Accommodation', icon: 'bi-building' },
   { label: 'Assign Drivers', icon: 'bi-person-check' },
   { label: 'Manage User', icon: 'bi-people' },
-  { label: 'Report', icon: 'bi-clipboard-data' },
 ]
 
 function OfficeDriverHistory() {
@@ -63,8 +62,26 @@ function OfficeDriverHistory() {
           const count = Number(booking.passenger_count)
           return Number.isFinite(count) ? count : null
         }
+      case 'day':
+        return toDate(booking.departure_time)?.getTime() ?? null
       case 'departure_time':
         return toDate(booking.departure_time)?.getTime() ?? null
+      case 'starting_time':
+        return toDate(booking.started_at)?.getTime() ?? null
+      case 'ending_time':
+        return toDate(booking.completed_at)?.getTime() ?? null
+      case 'total_duration':
+        return getDurationMinutes(booking) ?? null
+      case 'ot_hour':
+        {
+          const minutes = getOvertimeMinutes(booking)
+          return minutes === null ? null : Math.floor(minutes / 60)
+        }
+      case 'ot_minutes':
+        {
+          const minutes = getOvertimeMinutes(booking)
+          return minutes === null ? null : minutes % 60
+        }
       case 'trip_type':
         return booking.trip_type || ''
       case 'driver':
@@ -175,9 +192,9 @@ function OfficeDriverHistory() {
 
   const handleNavigate = (item) => {
     if (item === 'Dashboard') navigate('/office/home')
-    if (item === 'Ticket Requests') navigate('/office/ticket-requests')
+    if (item === 'Travel Accommodation Requests') navigate('/office/ticket-requests')
     if (item === 'Driver Requests') navigate('/office/driver-requests')
-    if (item === 'Ticket History') navigate('/office/ticket-history')
+    if (item === 'Travel Accommodation History') navigate('/office/ticket-history')
     if (item === 'Driver History') navigate('/office/driver-history')
     if (item === 'Travel Accommodation') navigate('/office/travel-accommodation')
     if (item === 'Assign Drivers') navigate('/office/assign-drivers')
@@ -189,12 +206,60 @@ function OfficeDriverHistory() {
     return dt ? dt.toLocaleDateString('en-GB') : '-'
   }
 
+  const formatDay = (value) => {
+    const dt = toDate(value)
+    return dt ? dt.toLocaleDateString('en-US', { weekday: 'short' }) : '-'
+  }
+
+  const formatTime = (value) => {
+    const dt = toDate(value)
+    return dt
+      ? dt.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false })
+      : '-'
+  }
+
   const formatTripType = (value) => {
     if (!value) return '-'
     if (value === 'antar') return 'Drop-off'
     if (value === 'jemput') return 'Pick-up'
     if (value === 'fulltrip') return 'Full Trip'
     return value
+  }
+
+  function getDurationMinutes(booking) {
+    const startedAt = toDate(booking?.started_at)
+    const completedAt = toDate(booking?.completed_at)
+    if (!startedAt || !completedAt) return null
+    const diffMs = completedAt.getTime() - startedAt.getTime()
+    if (diffMs < 0) return null
+    return Math.floor(diffMs / 60000)
+  }
+
+  const formatDuration = (booking) => {
+    const minutes = getDurationMinutes(booking)
+    if (minutes === null) return '-'
+    const hours = Math.floor(minutes / 60)
+    const mins = minutes % 60
+    return `${hours}h ${String(mins).padStart(2, '0')}m`
+  }
+
+  function getOvertimeMinutes(booking) {
+    const minutes = getDurationMinutes(booking)
+    if (minutes === null) return null
+    const overtime = minutes - 8 * 60
+    return overtime > 0 ? overtime : 0
+  }
+
+  const formatOvertimeHours = (booking) => {
+    const overtimeMinutes = getOvertimeMinutes(booking)
+    if (overtimeMinutes === null) return '-'
+    return String(Math.floor(overtimeMinutes / 60))
+  }
+
+  const formatOvertimeMinutes = (booking) => {
+    const overtimeMinutes = getOvertimeMinutes(booking)
+    if (overtimeMinutes === null) return '-'
+    return String(overtimeMinutes % 60)
   }
 
   const formatDistance = (booking) => {
@@ -247,7 +312,13 @@ function OfficeDriverHistory() {
       'Pickup Location',
       'Destination',
       'Passenger Count',
+      'Day',
       'Departure Date',
+      'Starting Time',
+      'Ending Time',
+      'Total Duration',
+      'OT hour',
+      'OT minutes',
       'Type of Trip',
       'Driver',
       'Starting Mileage',
@@ -265,7 +336,13 @@ function OfficeDriverHistory() {
       booking.pickup_location || '',
       booking.destination || '',
       booking.passenger_count ?? '',
+      formatDay(booking.departure_time),
       formatDate(booking.departure_time),
+      formatTime(booking.started_at),
+      formatTime(booking.completed_at),
+      formatDuration(booking),
+      formatOvertimeHours(booking),
+      formatOvertimeMinutes(booking),
       formatTripType(booking.trip_type),
       booking.driver_name || booking.driver_id || '',
       booking.starting_mileage ?? '',
@@ -406,8 +483,38 @@ function OfficeDriverHistory() {
                     </button>
                   </th>
                   <th>
+                    <button type="button" className="table-sort" onClick={() => toggleSort('day')}>
+                      Day {renderSortIcon('day')}
+                    </button>
+                  </th>
+                  <th>
                     <button type="button" className="table-sort" onClick={() => toggleSort('departure_time')}>
                       Departure Date {renderSortIcon('departure_time')}
+                    </button>
+                  </th>
+                  <th>
+                    <button type="button" className="table-sort" onClick={() => toggleSort('starting_time')}>
+                      Starting Time {renderSortIcon('starting_time')}
+                    </button>
+                  </th>
+                  <th>
+                    <button type="button" className="table-sort" onClick={() => toggleSort('ending_time')}>
+                      Ending Time {renderSortIcon('ending_time')}
+                    </button>
+                  </th>
+                  <th>
+                    <button type="button" className="table-sort" onClick={() => toggleSort('total_duration')}>
+                      Total Duration {renderSortIcon('total_duration')}
+                    </button>
+                  </th>
+                  <th>
+                    <button type="button" className="table-sort" onClick={() => toggleSort('ot_hour')}>
+                      OT hour {renderSortIcon('ot_hour')}
+                    </button>
+                  </th>
+                  <th>
+                    <button type="button" className="table-sort" onClick={() => toggleSort('ot_minutes')}>
+                      OT minutes {renderSortIcon('ot_minutes')}
                     </button>
                   </th>
                   <th>
@@ -445,19 +552,19 @@ function OfficeDriverHistory() {
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan="15" className="muted">
+                    <td colSpan="21" className="muted">
                       Loading...
                     </td>
                   </tr>
                 ) : error ? (
                   <tr>
-                    <td colSpan="15" className="error-text">
+                    <td colSpan="21" className="error-text">
                       {error}
                     </td>
                   </tr>
                 ) : bookings.length === 0 ? (
                   <tr>
-                    <td colSpan="15" className="muted">
+                    <td colSpan="21" className="muted">
                       No driver history found.
                     </td>
                   </tr>
@@ -472,7 +579,13 @@ function OfficeDriverHistory() {
                       <td>{booking.pickup_location || '-'}</td>
                       <td>{booking.destination || '-'}</td>
                       <td>{booking.passenger_count ?? '-'}</td>
+                      <td>{formatDay(booking.departure_time)}</td>
                       <td>{formatDate(booking.departure_time)}</td>
+                      <td>{formatTime(booking.started_at)}</td>
+                      <td>{formatTime(booking.completed_at)}</td>
+                      <td>{formatDuration(booking)}</td>
+                      <td>{formatOvertimeHours(booking)}</td>
+                      <td>{formatOvertimeMinutes(booking)}</td>
                       <td>{formatTripType(booking.trip_type)}</td>
                       <td>{booking.driver_name || booking.driver_id || '-'}</td>
                       <td>{booking.starting_mileage ?? '-'}</td>
