@@ -943,7 +943,42 @@
 .driver-route {
   margin: 0;
   font-size: 18px;
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
   color: #111827;
+}
+
+.driver-route__point {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.driver-route__label {
+  font-size: 13px;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  color: #475569;
+  font-weight: 700;
+}
+
+.driver-route__value {
+  font-weight: 800;
+  color: #111827;
+  word-break: break-word;
+}
+
+.driver-route__arrow {
+  align-self: center;
+  padding-inline: 18px;
+  font-size: 13px;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  font-weight: 800;
+  color: #475569;
 }
 
 .driver-subrow {
@@ -952,6 +987,11 @@
   gap: 10px;
   flex-wrap: wrap;
   margin-top: 8px;
+}
+
+.driver-subrow strong {
+  color: #111827;
+  font-weight: 800;
 }
 
 .driver-meta {
@@ -967,10 +1007,11 @@
 }
 
 .driver-meta__label {
-  font-size: 12px;
-  letter-spacing: 0.4px;
+  font-size: 13px;
+  letter-spacing: 0.3px;
   text-transform: uppercase;
-  color: #64748b;
+  color: #475569;
+  font-weight: 700;
 }
 
 .driver-meta__value {

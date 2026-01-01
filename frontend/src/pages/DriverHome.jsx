@@ -20,7 +20,6 @@ function DriverHome() {
     return new Date(now.getFullYear(), now.getMonth(), 1)
   })
   const [selectedDate, setSelectedDate] = useState(() => new Date())
-  const [filterDateKey, setFilterDateKey] = useState('')
 
   const [startModalOpen, setStartModalOpen] = useState(false)
   const [finishModalOpen, setFinishModalOpen] = useState(false)
@@ -240,6 +239,14 @@ function DriverHome() {
     }
   }
 
+  function toDateKey(date) {
+    if (!(date instanceof Date) || Number.isNaN(date.getTime())) return ''
+    const year = String(date.getFullYear())
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
+  }
+
   const counts = useMemo(() => {
     const activeCount = bookings.filter((b) => (b.status || 'pending') !== 'completed').length
     const completedCount = bookings.filter((b) => (b.status || 'pending') === 'completed').length
@@ -248,10 +255,19 @@ function DriverHome() {
 
   const items = useMemo(() => {
     const normalized = bookings.map((b) => ({ ...b, status: b.status || 'pending' }))
+    const selectedKey = toDateKey(selectedDate)
+
+    const dateFiltered = normalized.filter((booking) => {
+      if (!booking?.departure_time) return false
+      const dt = new Date(booking.departure_time)
+      if (Number.isNaN(dt.getTime())) return false
+      return toDateKey(dt) === selectedKey
+    })
+
     const filtered =
       tab === TABS.completed
-        ? normalized.filter((b) => b.status === 'completed')
-        : normalized.filter((b) => b.status !== 'completed')
+        ? dateFiltered.filter((b) => b.status === 'completed')
+        : dateFiltered.filter((b) => b.status !== 'completed')
 
     const safeTime = (value) => {
       const dt = new Date(value)
@@ -268,15 +284,7 @@ function DriverHome() {
     })
 
     return sorted
-  }, [bookings, tab])
-
-  const toDateKey = (date) => {
-    if (!(date instanceof Date) || Number.isNaN(date.getTime())) return ''
-    const year = String(date.getFullYear())
-    const month = String(date.getMonth() + 1).padStart(2, '0')
-    const day = String(date.getDate()).padStart(2, '0')
-    return `${year}-${month}-${day}`
-  }
+  }, [bookings, tab, selectedDate])
 
   const monthLabel = useMemo(() => {
     const label = calendarMonth.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })
@@ -327,31 +335,8 @@ function DriverHome() {
     return map
   }, [bookings])
 
-  const selectedKey = useMemo(() => toDateKey(selectedDate), [selectedDate])
+  const selectedKey = toDateKey(selectedDate)
   const todayKey = useMemo(() => toDateKey(new Date()), [])
-
-  useEffect(() => {
-    const sameMonth =
-      selectedDate.getFullYear() === calendarMonth.getFullYear() &&
-      selectedDate.getMonth() === calendarMonth.getMonth()
-
-    if (!sameMonth) {
-      setSelectedDate(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth(), 1))
-    }
-
-    setFilterDateKey('')
-  }, [calendarMonth])
-
-  const visibleItems = useMemo(() => {
-    if (!filterDateKey) return items
-
-    return items.filter((booking) => {
-      if (!booking?.departure_time) return false
-      const dt = new Date(booking.departure_time)
-      if (Number.isNaN(dt.getTime())) return false
-      return toDateKey(dt) === filterDateKey
-    })
-  }, [items, filterDateKey])
 
   const formatDeparture = (value) => {
     if (!value) return '-'
@@ -369,6 +354,43 @@ function DriverHome() {
     if (value === 'fulltrip') return 'Full Trip'
     return value
   }
+
+  const changeMonth = (delta) => {
+    const targetMonth = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() + delta, 1)
+    const today = new Date()
+    const isCurrentMonth =
+      today.getFullYear() === targetMonth.getFullYear() && today.getMonth() === targetMonth.getMonth()
+
+    const nextSelectedDate = isCurrentMonth
+      ? new Date(today.getFullYear(), today.getMonth(), today.getDate())
+      : targetMonth
+
+    setCalendarMonth(targetMonth)
+    setSelectedDate(nextSelectedDate)
+
+    const key = toDateKey(nextSelectedDate)
+    const meta = taskMetaByDate.get(key)
+    if (meta) {
+      if (tab === TABS.active && meta.incomplete === 0 && meta.completed > 0) {
+        setTab(TABS.completed)
+      }
+      if (tab === TABS.completed && meta.completed === 0 && meta.incomplete > 0) {
+        setTab(TABS.active)
+      }
+    }
+  }
+
+  const isActiveTab = tab === TABS.active
+  const tabLabel = isActiveTab ? 'active' : 'completed'
+  const otherTabLabel = isActiveTab ? 'completed' : 'active'
+  const selectedMeta = taskMetaByDate.get(selectedKey)
+  const hasAnyTasksForDate = (selectedMeta?.total || 0) > 0
+  const otherTabHasTasksForDate = isActiveTab ? (selectedMeta?.completed || 0) > 0 : (selectedMeta?.incomplete || 0) > 0
+
+  const selectedDateLabel =
+    selectedDate instanceof Date && !Number.isNaN(selectedDate.getTime())
+      ? selectedDate.toLocaleDateString('en-GB')
+      : 'this date'
 
   return (
     <MainLayout title="">
@@ -403,9 +425,7 @@ function DriverHome() {
             <button
               type="button"
               className="calendar-nav"
-              onClick={() =>
-                setCalendarMonth((prev) => new Date(prev.getFullYear(), prev.getMonth() - 1, 1))
-              }
+              onClick={() => changeMonth(-1)}
               aria-label="Previous month"
             >
               <i className="bi bi-chevron-left" aria-hidden="true" />
@@ -416,9 +436,7 @@ function DriverHome() {
             <button
               type="button"
               className="calendar-nav"
-              onClick={() =>
-                setCalendarMonth((prev) => new Date(prev.getFullYear(), prev.getMonth() + 1, 1))
-              }
+              onClick={() => changeMonth(1)}
               aria-label="Next month"
             >
               <i className="bi bi-chevron-right" aria-hidden="true" />
@@ -428,11 +446,11 @@ function DriverHome() {
           <div className="calendar-legend" aria-label="Calendar legend">
             <div className="calendar-legend-item">
               <span className="calendar-dot task-pending" aria-hidden="true" />
-              <span>Has active tasks</span>
+              <span>Pending tasks</span>
             </div>
             <div className="calendar-legend-item">
               <span className="calendar-dot task-completed" aria-hidden="true" />
-              <span>All tasks completed</span>
+              <span>Active tasks</span>
             </div>
             <div className="calendar-legend-item">
               <span className="calendar-dot no-task" aria-hidden="true" />
@@ -468,18 +486,14 @@ function DriverHome() {
                     className={`calendar-cell ${isSelected ? 'is-selected' : ''} ${isToday ? 'is-today' : ''}`}
                     onClick={() => {
                       setSelectedDate(date)
-                      setFilterDateKey((prev) => {
-                        const next = prev === key ? '' : key
-                        if (next && meta) {
-                          if (tab === TABS.active && meta.incomplete === 0 && meta.completed > 0) {
-                            setTab(TABS.completed)
-                          }
-                          if (tab === TABS.completed && meta.completed === 0 && meta.incomplete > 0) {
-                            setTab(TABS.active)
-                          }
+                      if (meta) {
+                        if (tab === TABS.active && meta.incomplete === 0 && meta.completed > 0) {
+                          setTab(TABS.completed)
                         }
-                        return next
-                      })
+                        if (tab === TABS.completed && meta.completed === 0 && meta.incomplete > 0) {
+                          setTab(TABS.active)
+                        }
+                      }
                     }}
                     aria-label={`${dayNumber} ${monthLabel}${count ? `, ${count} task(s)` : ''}`}
                   >
@@ -497,20 +511,24 @@ function DriverHome() {
         {!loading && !error && actionMessage ? <p className="success-text">{actionMessage}</p> : null}
         {!loading && !error && actionError ? <p className="error-text">{actionError}</p> : null}
 
-        {!loading && !error && visibleItems.length === 0 ? (
+        {!loading && !error && items.length === 0 ? (
           <div className="driver-empty">
-            <h2>{filterDateKey ? 'No assignments for this date' : 'No assignments yet'}</h2>
+            <h2>
+              No {tabLabel} tasks for {selectedDateLabel}
+            </h2>
             <p className="muted">
-              {filterDateKey
-                ? 'Try selecting another date or clear the filter by clicking the same date again.'
-                : 'When the office assigns you a booking, it will appear here.'}
+              {otherTabHasTasksForDate
+                ? `Try switching to the ${otherTabLabel} tab.`
+                : hasAnyTasksForDate
+                  ? 'Try selecting another date.'
+                  : 'Try selecting another date or navigating to another month.'}
             </p>
           </div>
         ) : null}
 
-        {!loading && !error && visibleItems.length > 0 ? (
+        {!loading && !error && items.length > 0 ? (
           <div className="driver-list">
-            {visibleItems.map((booking) => {
+            {items.map((booking) => {
               const phone = booking.requester_phone || ''
               const email = booking.requester_email || ''
               const isCompleted = booking.status === 'completed'
@@ -520,11 +538,21 @@ function DriverHome() {
                   <div className="driver-card__top">
                     <div className="driver-card__title">
                       <h2 className="driver-route">
-                        {booking.pickup_location || '-'} → {booking.destination || '-'}
+                        <span className="driver-route__point">
+                          <span className="driver-route__label">Pickup Location</span>
+                          <span className="driver-route__value">{booking.pickup_location || '-'}</span>
+                        </span>
+                        <span className="driver-route__arrow">to</span>
+                        <span className="driver-route__point">
+                          <span className="driver-route__label">Destination</span>
+                          <span className="driver-route__value">{booking.destination || '-'}</span>
+                        </span>
                       </h2>
                       <div className="driver-subrow">
                         <span className={`status-badge status-${booking.status}`}>{booking.status}</span>
-                        <span className="muted">Departure: {formatDeparture(booking.departure_time)}</span>
+                        <span className="muted">
+                          Departure: <strong>{formatDeparture(booking.departure_time)}</strong>
+                        </span>
                       </div>
                     </div>
                   </div>
