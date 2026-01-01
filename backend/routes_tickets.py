@@ -216,7 +216,7 @@ def create_travel_accommodation(payload: TicketCreate, current_user=Depends(get_
         **payload.model_dump(),
         "departure_date": departure_date_value,
         "user_id": linked_user_id,
-        "status": "approved",
+        "status": "pending",
         "created_by": uid,
         "created_at": firestore.SERVER_TIMESTAMP,
         "updated_at": firestore.SERVER_TIMESTAMP,

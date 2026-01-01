@@ -40,6 +40,12 @@ function OfficeManageUser() {
   const [createLoading, setCreateLoading] = useState(false)
   const [createError, setCreateError] = useState('')
 
+  const [importModalOpen, setImportModalOpen] = useState(false)
+  const [importFile, setImportFile] = useState(null)
+  const [importLoading, setImportLoading] = useState(false)
+  const [importError, setImportError] = useState('')
+  const [importResult, setImportResult] = useState(null)
+
   const [selectedUser, setSelectedUser] = useState(null)
   const [editForm, setEditForm] = useState(null)
   const [editLoading, setEditLoading] = useState(false)
@@ -115,6 +121,107 @@ function OfficeManageUser() {
 
   const handleEditChange = (field) => (event) => {
     setEditForm((prev) => ({ ...prev, [field]: event.target.value }))
+  }
+
+  const openImportModal = () => {
+    setImportModalOpen(true)
+    setImportFile(null)
+    setImportLoading(false)
+    setImportError('')
+    setImportResult(null)
+  }
+
+  const closeImportModal = () => {
+    if (importLoading) return
+    setImportModalOpen(false)
+    setImportError('')
+  }
+
+  const handleImportFileChange = (event) => {
+    const file = event.target.files?.[0] ?? null
+    setImportFile(file)
+    setImportError('')
+    setImportResult(null)
+  }
+
+  const readFileAsBase64 = (file) =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = () => {
+        const result = String(reader.result || '')
+        const base64 = result.split(',')[1] || ''
+        resolve(base64)
+      }
+      reader.onerror = () => reject(reader.error || new Error('Failed to read file'))
+      reader.readAsDataURL(file)
+    })
+
+  const downloadImportTemplate = () => {
+    const csv = [
+      'name,dept_job_position,role,nik,phone,email,password',
+      'John Doe,Finance,user,1234567890,081234567890,john@example.com,password123',
+    ].join('\n')
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+
+    const link = document.createElement('a')
+    link.href = url
+    link.download = 'user_import_template.csv'
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    URL.revokeObjectURL(url)
+  }
+
+  const handleImportUsers = async () => {
+    if (!token) {
+      setImportError('Authentication token not found.')
+      return
+    }
+
+    if (!importFile) {
+      setImportError('Please choose a file (.xlsx or .csv).')
+      return
+    }
+
+    setImportLoading(true)
+    setImportError('')
+    setImportResult(null)
+
+    try {
+      const fileBase64 = await readFileAsBase64(importFile)
+      const res = await fetch('http://localhost:8000/users/import', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          filename: importFile.name,
+          file_base64: fileBase64,
+        }),
+      })
+
+      if (!res.ok) {
+        let detail = 'Failed to import users.'
+        try {
+          const data = await res.json()
+          if (data?.detail) detail = data.detail
+        } catch {
+          // ignore parse error
+        }
+        setImportError(detail)
+        return
+      }
+
+      const data = await res.json()
+      setImportResult(data)
+      await loadUsers()
+    } catch (err) {
+      setImportError('Network error. Please try again.')
+    } finally {
+      setImportLoading(false)
+    }
   }
 
   const handleSelectUser = (user) => {
@@ -302,6 +409,9 @@ function OfficeManageUser() {
           <div className="form-actions">
             <button type="button" className="btn btn-primary" onClick={() => setShowCreate((v) => !v)}>
               {showCreate ? 'Close Create Form' : 'Create Account'}
+            </button>
+            <button type="button" className="btn btn-neutral" onClick={openImportModal}>
+              Import Excel
             </button>
           </div>
 
@@ -613,6 +723,103 @@ function OfficeManageUser() {
                       </button>
                     </>
                   )}
+                </div>
+              </div>
+            </div>
+          ) : null}
+
+          {importModalOpen ? (
+            <div
+              className="modal-overlay"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="user-import-title"
+              onClick={() => {
+                if (!importLoading) closeImportModal()
+              }}
+            >
+              <div
+                className="modal"
+                onClick={(event) => {
+                  event.stopPropagation()
+                }}
+              >
+                <div className="modal-header">
+                  <h2 id="user-import-title">Import Accounts</h2>
+                  <button
+                    type="button"
+                    className="modal-close"
+                    onClick={closeImportModal}
+                    disabled={importLoading}
+                    aria-label="Close"
+                  >
+                    &times;
+                  </button>
+                </div>
+
+                <p className="muted" style={{ marginTop: 0 }}>
+                  Upload an Excel (.xlsx) or CSV (.csv) file to create multiple users. Allowed roles: <code>user</code>,{' '}
+                  <code>driver</code> (role is optional; default is <code>user</code>).
+                </p>
+
+                <label className="inline-label">
+                  <span>File</span>
+                  <input type="file" accept=".xlsx,.csv" onChange={handleImportFileChange} disabled={importLoading} />
+                </label>
+
+                <p className="muted" style={{ marginTop: 0 }}>
+                  Required columns: <code>name</code>, <code>dept_job_position</code>, <code>nik</code>, <code>phone</code>
+                  , <code>email</code>, <code>password</code>. Optional: <code>role</code>.
+                </p>
+
+                {importError ? <p className="error-text">{importError}</p> : null}
+
+                {importResult ? (
+                  <>
+                    <p className="success-text" style={{ marginTop: 0 }}>
+                      Created: {importResult.created ?? 0} • Failed: {importResult.failed ?? 0}
+                    </p>
+                    {Array.isArray(importResult.errors) && importResult.errors.length ? (
+                      <div
+                        style={{
+                          maxHeight: 220,
+                          overflow: 'auto',
+                          border: '1px solid #e2e8f0',
+                          borderRadius: 12,
+                          padding: 12,
+                        }}
+                      >
+                        {importResult.errors.map((item, index) => (
+                          <p key={`${item.row}-${index}`} className="muted" style={{ margin: '0 0 10px 0' }}>
+                            Row {item.row}
+                            {item.email ? ` (${item.email})` : ''}: {item.message}
+                          </p>
+                        ))}
+                      </div>
+                    ) : null}
+                  </>
+                ) : null}
+
+                <div className="modal-actions">
+                  <button
+                    type="button"
+                    className="btn btn-primary"
+                    onClick={handleImportUsers}
+                    disabled={importLoading || !importFile}
+                  >
+                    {importLoading ? 'Importing...' : 'Import'}
+                  </button>
+                  <button type="button" className="btn btn-neutral" onClick={downloadImportTemplate} disabled={importLoading}>
+                    Download Template CSV
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-outline-danger"
+                    onClick={closeImportModal}
+                    disabled={importLoading}
+                  >
+                    Close
+                  </button>
                 </div>
               </div>
             </div>

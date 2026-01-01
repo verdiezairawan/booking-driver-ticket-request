@@ -97,7 +97,7 @@ function OfficeTravelAccommodation() {
       })
 
       if (!response.ok) {
-        let detail = 'Failed to create travel accommodation.'
+        let detail = 'Failed to submit travel request.'
         try {
           const data = await response.json()
           if (data?.detail) detail = data.detail
@@ -106,7 +106,7 @@ function OfficeTravelAccommodation() {
         }
         setErrorMessage(detail)
       } else {
-        setSuccessMessage('Travel accommodation created and approved.')
+        setSuccessMessage('Travel request submitted. Awaiting approval.')
         setForm(initialForm)
         setShowSuccessModal(true)
       }
@@ -154,9 +154,7 @@ function OfficeTravelAccommodation() {
           <header className="office-header">
             <p className="eyebrow">Travel Accommodation</p>
             <h1>Create Travel Accommodation</h1>
-            <p className="muted">
-              Create an approved ticket request on behalf of a user (will go directly to ticket history).
-            </p>
+            <p className="muted">Create a travel ticket request on behalf of a user (will appear in Travel Requests for approval).</p>
           </header>
 
           <form className="ticket-form" onSubmit={handleSubmit}>
@@ -412,10 +410,10 @@ function OfficeTravelAccommodation() {
 
             <div className="form-actions">
               <button type="submit" className="btn btn-primary" disabled={loading}>
-                {loading ? 'Submitting...' : 'Submit & Approve'}
+                {loading ? 'Submitting...' : 'Submit Request'}
               </button>
-              <button type="button" className="btn btn-neutral" onClick={() => navigate('/office/ticket-history')}>
-                View History
+              <button type="button" className="btn btn-neutral" onClick={() => navigate('/office/ticket-requests')}>
+                View Travel Requests
               </button>
             </div>
           </form>
@@ -430,7 +428,7 @@ function OfficeTravelAccommodation() {
                   Submitted
                 </h2>
                 <p className="success-modal-message">
-                  Travel accommodation was created and approved successfully. It will appear in ticket history.
+                  Travel request was submitted successfully. It will appear in Travel Requests for approval.
                 </p>
                 <div className="success-modal-actions">
                   <button
@@ -438,10 +436,10 @@ function OfficeTravelAccommodation() {
                     className="btn btn-brand"
                     onClick={() => {
                       setShowSuccessModal(false)
-                      navigate('/office/ticket-history')
+                      navigate('/office/ticket-requests')
                     }}
                   >
-                    View History
+                    View Travel Requests
                   </button>
                   <button type="button" className="btn btn-outline-brand" onClick={() => setShowSuccessModal(false)}>
                     Back to Form
