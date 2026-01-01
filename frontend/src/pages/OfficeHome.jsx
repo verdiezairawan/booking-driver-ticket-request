@@ -16,11 +16,7 @@ const menuItems = [
 
 const actionConfig = [
   { label: 'Pending Travel', type: 'ticketPending', icon: 'bi-ticket-perforated-fill' },
-  { label: 'Approved Travel', type: 'ticketApproved', icon: 'bi-check-circle-fill' },
-  { label: 'Rejected Travel', type: 'ticketRejected', icon: 'bi-x-circle-fill' },
-  { label: 'Pending Bookings', type: 'bookingPending', icon: 'bi-car-front-fill' },
-  { label: 'Rejected Drivers', type: 'bookingRejected', icon: 'bi-slash-circle-fill' },
-  { label: 'Completed Drivers', type: 'bookingCompleted', icon: 'bi-check2-circle' },
+  { label: 'Pending Booking Driver', type: 'bookingPending', icon: 'bi-car-front-fill' },
 ]
 
 function OfficeHome() {
@@ -29,12 +25,7 @@ function OfficeHome() {
   const [profile, setProfile] = useState({ name: '' })
   const [stats, setStats] = useState({
     ticketPending: 0,
-    ticketApproved: 0,
-    ticketRejected: 0,
     bookingPending: 0,
-    bookingApproved: 0,
-    bookingRejected: 0,
-    bookingCompleted: 0,
   })
 
   useEffect(() => {
@@ -71,12 +62,7 @@ function OfficeHome() {
 
         setStats({
           ticketPending: ticketData.pending || 0,
-          ticketApproved: ticketData.approved || 0,
-          ticketRejected: ticketData.rejected || 0,
           bookingPending: bookingData.pending || 0,
-          bookingApproved: bookingData.approved || 0,
-          bookingRejected: bookingData.rejected || 0,
-          bookingCompleted: bookingData.completed || 0,
         })
       } catch (err) {
         console.error('Failed to load stats', err)
