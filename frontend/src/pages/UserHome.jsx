@@ -121,7 +121,7 @@ function UserHome() {
                 <i className="bi bi-car-front" />
               </div>
               <div>
-                <p className="stat-label">Pending Bookings</p>
+                <p className="stat-label">Pending Booking Driver</p>
                 <p className="stat-value">{stats.bookingPending}</p>
               </div>
             </article>
@@ -130,7 +130,7 @@ function UserHome() {
                 <i className="bi bi-activity" />
               </div>
               <div>
-                <p className="stat-label">Active Bookings</p>
+                <p className="stat-label">Active Booking Driver</p>
                 <p className="stat-value">{stats.bookingActive}</p>
               </div>
             </article>
@@ -217,7 +217,7 @@ function UserHome() {
                 <i className="bi bi-car-front" />
               </div>
               <div className="action-content">
-                <h3>Driver History</h3>
+                <h3>Booking Driver Status & History</h3>
                 <p className="muted">View all your driver bookings</p>
                 <span className="link-cta">
                   View <span aria-hidden="true">&rarr;</span>

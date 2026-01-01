@@ -220,7 +220,7 @@ function BookingDriver() {
                 />
               </label>
               <label className="form-field">
-                <span>Passenger Count</span>
+                <span>Total Passenger</span>
                 <input
                   type="number"
                   min="1"

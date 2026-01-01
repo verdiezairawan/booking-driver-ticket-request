@@ -1173,6 +1173,10 @@
   flex-wrap: wrap;
 }
 
+.history-header h1 {
+  margin: 4px 0;
+}
+
 @media (max-width: 768px) {
   .ticket-request-page {
     padding: 0;

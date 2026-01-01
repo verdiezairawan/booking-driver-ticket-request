@@ -146,8 +146,8 @@ function TicketRequest() {
             &larr; Back
           </button>
           <div>
-            <p className="eyebrow">Ticket Request</p>
-            <h1>Business Travel Ticketing Request</h1>
+            <p className="eyebrow">Travel Request</p>
+            <h1>Business Travel Accomodation Request</h1>
             <p className="muted">Fill out the form to submit a request</p>
           </div>
         </header>

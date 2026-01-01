@@ -21,6 +21,20 @@ function BookingHistory() {
     return Number.isNaN(parsed.getTime()) ? null : parsed
   }
 
+  const getBookingStatus = (booking) => {
+    const raw = String(booking?.status || 'pending').toLowerCase()
+    if (raw === 'approved') {
+      const hasStarted = booking?.starting_mileage !== null && booking?.starting_mileage !== undefined
+      if (hasStarted || booking?.started_at) return 'in_progress'
+    }
+    return raw
+  }
+
+  const formatStatusText = (value) => {
+    if (!value) return '-'
+    return String(value).replace(/_/g, ' ')
+  }
+
   const getBookingSortValue = (booking, key) => {
     if (!booking) return ''
     switch (key) {
@@ -40,12 +54,17 @@ function BookingHistory() {
         return booking.pickup_location || ''
       case 'destination':
         return booking.destination || ''
+      case 'passenger_count':
+        {
+          const count = Number(booking.passenger_count)
+          return Number.isFinite(count) ? count : null
+        }
       case 'trip_type':
         return booking.trip_type || ''
       case 'departure_time':
         return toDate(booking.departure_time)?.getTime() ?? null
       case 'status':
-        return String(booking.status || '').toLowerCase()
+        return getBookingStatus(booking)
       default:
         return ''
     }
@@ -237,8 +256,8 @@ function BookingHistory() {
             &larr; Back
           </button>
           <div>
-            <p className="eyebrow">Booking History</p>
-            <h1>Driver Booking History</h1>
+            <p className="eyebrow">Booking Driver Status & History</p>
+            <h1>List of all Booking Driver Request</h1>
             <p className="muted">Track the status of all your driver booking requests</p>
           </div>
         </header>
@@ -298,6 +317,11 @@ function BookingHistory() {
                       </button>
                     </th>
                     <th>
+                      <button type="button" className="table-sort" onClick={() => toggleSort('passenger_count')}>
+                        Total Passenger {renderSortIcon('passenger_count')}
+                      </button>
+                    </th>
+                    <th>
                       <button type="button" className="table-sort" onClick={() => toggleSort('trip_type')}>
                         Trip Type {renderSortIcon('trip_type')}
                       </button>
@@ -318,13 +342,13 @@ function BookingHistory() {
                 <tbody>
                   {bookings.length === 0 ? (
                     <tr>
-                      <td colSpan="12" className="muted">
+                      <td colSpan="13" className="muted">
                         No driver bookings yet.
                       </td>
                     </tr>
                   ) : (
                     pagedBookings.map((booking) => {
-                      const statusValue = (booking.status || 'pending').toLowerCase()
+                      const statusValue = getBookingStatus(booking)
                       const isPending = statusValue === 'pending'
 
                       return (
@@ -337,10 +361,11 @@ function BookingHistory() {
                           <td className="cell-wrap">{booking.requester_email || '-'}</td>
                           <td className="cell-wrap">{booking.pickup_location || '-'}</td>
                           <td className="cell-wrap">{booking.destination || '-'}</td>
+                          <td>{booking.passenger_count ?? '-'}</td>
                           <td>{formatTripType(booking.trip_type)}</td>
                           <td>{formatDateTime(booking.departure_time)}</td>
                           <td>
-                            <span className={`status-badge status-${statusValue}`}>{booking.status || 'pending'}</span>
+                            <span className={`status-badge status-${statusValue}`}>{formatStatusText(statusValue)}</span>
                           </td>
                           <td>
                             {isPending ? (

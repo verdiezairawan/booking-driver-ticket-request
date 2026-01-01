@@ -271,9 +271,9 @@ function TicketHistory() {
             &larr; Back
           </button>
           <div>
-            <p className="eyebrow">Ticket History</p>
-            <h1>Ticket Request History</h1>
-            <p className="muted">Track the status of all your travel ticket requests</p>
+            <p className="eyebrow">Travel Status & History</p>
+            <h1>List of all Travel Request</h1>
+            <p className="muted">Track the status of all your travel requests</p>
           </div>
         </header>
 
