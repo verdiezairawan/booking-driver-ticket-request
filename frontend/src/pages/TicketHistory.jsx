@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import MainLayout from '../components/MainLayout'
 
@@ -10,11 +10,118 @@ function TicketHistory() {
   const [actionError, setActionError] = useState('')
   const [actionLoadingId, setActionLoadingId] = useState('')
   const [page, setPage] = useState(1)
+  const [sortConfig, setSortConfig] = useState({ key: '', direction: 'asc' })
 
   const pageSize = 10
-  const totalPages = Math.max(1, Math.ceil(tickets.length / pageSize))
+
+  const toDate = (value) => {
+    if (!value) return null
+    if (value?.seconds) {
+      return new Date(value.seconds * 1000)
+    }
+    const parsed = new Date(value)
+    return Number.isNaN(parsed.getTime()) ? null : parsed
+  }
+
+  const getTicketSortValue = (ticket, key) => {
+    if (!ticket) return ''
+    switch (key) {
+      case 'created_at':
+        return toDate(ticket.created_at)?.getTime() ?? null
+      case 'full_name':
+        return ticket.full_name || ''
+      case 'national_id':
+        return ticket.national_id || ''
+      case 'dept_job_position':
+        return ticket.dept_job_position || ''
+      case 'phone_number':
+        return ticket.phone_number || ''
+      case 'email':
+        return ticket.email || ''
+      case 'departure_datetime':
+        {
+          const date = toDate(ticket.departure_date)
+          if (!date) return null
+          const timeValue = String(ticket.departure_time || '').trim()
+          if (!timeValue) return date.getTime()
+
+          const [hours, minutes] = timeValue.split(':').map((part) => Number(part))
+          if (!Number.isFinite(hours) || !Number.isFinite(minutes)) return date.getTime()
+
+          const merged = new Date(date)
+          merged.setHours(hours, minutes, 0, 0)
+          return merged.getTime()
+        }
+      case 'departure_point':
+        return ticket.departure_point || ''
+      case 'destination':
+        return ticket.destination || ''
+      case 'trip_type':
+        return ticket.trip_type || ''
+      case 'hotel_accommodation':
+        {
+          const value = ticket.hotel_accommodation
+          if (value === true || value === 'yes') return 1
+          if (value === false || value === 'no') return 0
+          return null
+        }
+      case 'hotel_name':
+        return ticket.hotel_name || ''
+      case 'hotel_location':
+        return ticket.hotel_location || ''
+      case 'transportation_mode':
+        return ticket.transportation_mode || ''
+      case 'superior_approval_note':
+        return ticket.superior_approval_note || ''
+      case 'additional_notes':
+        return ticket.additional_notes || ''
+      case 'status':
+        return String(ticket.status || '').toLowerCase()
+      default:
+        return ''
+    }
+  }
+
+  const compareValues = (aValue, bValue) => {
+    const aEmpty = aValue === null || aValue === undefined || aValue === ''
+    const bEmpty = bValue === null || bValue === undefined || bValue === ''
+
+    if (aEmpty && bEmpty) return 0
+    if (aEmpty) return 1
+    if (bEmpty) return -1
+
+    if (typeof aValue === 'number' && typeof bValue === 'number') {
+      return aValue - bValue
+    }
+
+    return String(aValue).localeCompare(String(bValue), undefined, {
+      numeric: true,
+      sensitivity: 'base',
+    })
+  }
+
+  const sortedTickets = useMemo(() => {
+    if (!sortConfig.key) return tickets
+
+    return tickets
+      .map((ticket, index) => ({ ticket, index }))
+      .sort((a, b) => {
+        const aValue = getTicketSortValue(a.ticket, sortConfig.key)
+        const bValue = getTicketSortValue(b.ticket, sortConfig.key)
+        const base = compareValues(aValue, bValue)
+
+        if (base !== 0) {
+          return sortConfig.direction === 'asc' ? base : -base
+        }
+
+        return a.index - b.index
+      })
+      .map((entry) => entry.ticket)
+  }, [tickets, sortConfig])
+
+  const totalPages = Math.max(1, Math.ceil(sortedTickets.length / pageSize))
   const currentPage = Math.min(page, totalPages)
-  const pagedTickets = tickets.slice((currentPage - 1) * pageSize, currentPage * pageSize)
+  const pagedTickets = sortedTickets.slice((currentPage - 1) * pageSize, currentPage * pageSize)
 
   useEffect(() => {
     setPage((prev) => Math.min(prev, totalPages))
@@ -109,13 +216,27 @@ function TicketHistory() {
     }
   }
 
-  const toDate = (value) => {
-    if (!value) return null
-    if (value?.seconds) {
-      return new Date(value.seconds * 1000)
+  const toggleSort = (key) => {
+    setPage(1)
+    setSortConfig((prev) => {
+      if (prev.key === key) {
+        return { key, direction: prev.direction === 'asc' ? 'desc' : 'asc' }
+      }
+      return { key, direction: 'asc' }
+    })
+  }
+
+  const renderSortIcon = (key) => {
+    const isActive = sortConfig.key === key
+    if (!isActive) {
+      return <i className="bi bi-arrow-down-up sort-indicator sort-indicator-muted" aria-hidden="true" />
     }
-    const parsed = new Date(value)
-    return Number.isNaN(parsed.getTime()) ? null : parsed
+    return (
+      <i
+        className={`bi ${sortConfig.direction === 'asc' ? 'bi-caret-up-fill' : 'bi-caret-down-fill'} sort-indicator`}
+        aria-hidden="true"
+      />
+    )
   }
 
   const formatDate = (value) => {
@@ -166,23 +287,91 @@ function TicketHistory() {
               <table className="simple-table">
                 <thead>
                   <tr>
-                    <th>Submission Date</th>
-                    <th>Name</th>
-                    <th>National ID</th>
-                    <th>Dept/Job Position</th>
-                    <th>Phone</th>
-                    <th>Email</th>
-                    <th>Departure Date</th>
-                    <th>Departure Point</th>
-                    <th>Destination</th>
-                    <th>Type of Trip</th>
-                    <th>Hotel Accommodation</th>
-                    <th>Hotel Name</th>
-                    <th>Hotel Location</th>
-                    <th>Transportation</th>
-                    <th>Approval Note</th>
-                    <th>Additional Notes</th>
-                    <th>Status</th>
+                    <th>
+                      <button type="button" className="table-sort" onClick={() => toggleSort('created_at')}>
+                        Submission Date {renderSortIcon('created_at')}
+                      </button>
+                    </th>
+                    <th>
+                      <button type="button" className="table-sort" onClick={() => toggleSort('full_name')}>
+                        Name {renderSortIcon('full_name')}
+                      </button>
+                    </th>
+                    <th>
+                      <button type="button" className="table-sort" onClick={() => toggleSort('national_id')}>
+                        National ID {renderSortIcon('national_id')}
+                      </button>
+                    </th>
+                    <th>
+                      <button type="button" className="table-sort" onClick={() => toggleSort('dept_job_position')}>
+                        Dept/Job Position {renderSortIcon('dept_job_position')}
+                      </button>
+                    </th>
+                    <th>
+                      <button type="button" className="table-sort" onClick={() => toggleSort('phone_number')}>
+                        Phone {renderSortIcon('phone_number')}
+                      </button>
+                    </th>
+                    <th>
+                      <button type="button" className="table-sort" onClick={() => toggleSort('email')}>
+                        Email {renderSortIcon('email')}
+                      </button>
+                    </th>
+                    <th>
+                      <button type="button" className="table-sort" onClick={() => toggleSort('departure_datetime')}>
+                        Departure Date {renderSortIcon('departure_datetime')}
+                      </button>
+                    </th>
+                    <th>
+                      <button type="button" className="table-sort" onClick={() => toggleSort('departure_point')}>
+                        Departure Point {renderSortIcon('departure_point')}
+                      </button>
+                    </th>
+                    <th>
+                      <button type="button" className="table-sort" onClick={() => toggleSort('destination')}>
+                        Destination {renderSortIcon('destination')}
+                      </button>
+                    </th>
+                    <th>
+                      <button type="button" className="table-sort" onClick={() => toggleSort('trip_type')}>
+                        Type of Trip {renderSortIcon('trip_type')}
+                      </button>
+                    </th>
+                    <th>
+                      <button type="button" className="table-sort" onClick={() => toggleSort('hotel_accommodation')}>
+                        Hotel Accommodation {renderSortIcon('hotel_accommodation')}
+                      </button>
+                    </th>
+                    <th>
+                      <button type="button" className="table-sort" onClick={() => toggleSort('hotel_name')}>
+                        Hotel Name {renderSortIcon('hotel_name')}
+                      </button>
+                    </th>
+                    <th>
+                      <button type="button" className="table-sort" onClick={() => toggleSort('hotel_location')}>
+                        Hotel Location {renderSortIcon('hotel_location')}
+                      </button>
+                    </th>
+                    <th>
+                      <button type="button" className="table-sort" onClick={() => toggleSort('transportation_mode')}>
+                        Transportation {renderSortIcon('transportation_mode')}
+                      </button>
+                    </th>
+                    <th>
+                      <button type="button" className="table-sort" onClick={() => toggleSort('superior_approval_note')}>
+                        Approval Note {renderSortIcon('superior_approval_note')}
+                      </button>
+                    </th>
+                    <th>
+                      <button type="button" className="table-sort" onClick={() => toggleSort('additional_notes')}>
+                        Additional Notes {renderSortIcon('additional_notes')}
+                      </button>
+                    </th>
+                    <th>
+                      <button type="button" className="table-sort" onClick={() => toggleSort('status')}>
+                        Status {renderSortIcon('status')}
+                      </button>
+                    </th>
                     <th>Action</th>
                   </tr>
                 </thead>
