@@ -18,10 +18,17 @@ function OfficeTicketHistory() {
   const navigate = useNavigate()
   const { collapsed: isSidebarCollapsed, toggle: toggleSidebar } = useOfficeSidebar()
   const [tickets, setTickets] = useState([])
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [page, setPage] = useState(1)
   const [sortConfig, setSortConfig] = useState({ key: '', direction: 'asc' })
+  const [hasLoaded, setHasLoaded] = useState(false)
+  const [rangeModalOpen, setRangeModalOpen] = useState(true)
+  const [rangeMode, setRangeMode] = useState('all')
+  const [rangeStart, setRangeStart] = useState('')
+  const [rangeEnd, setRangeEnd] = useState('')
+  const [rangeError, setRangeError] = useState('')
+  const [activeRange, setActiveRange] = useState({ mode: 'all', start: '', end: '' })
 
   const pageSize = 10
 
@@ -121,45 +128,120 @@ function OfficeTicketHistory() {
     setPage((prev) => Math.min(prev, totalPages))
   }, [totalPages])
 
-  useEffect(() => {
+  const getActiveRangeLabel = () => {
+    if (!hasLoaded) return 'Not loaded'
+    if (activeRange.mode === 'all') return 'All time'
+    if (activeRange.start && activeRange.end) return `${activeRange.start} to ${activeRange.end}`
+    return 'Custom range'
+  }
+
+  const openRangeModal = () => {
+    setRangeError('')
+    setRangeMode(activeRange.mode || 'all')
+    setRangeStart(activeRange.start || '')
+    setRangeEnd(activeRange.end || '')
+    setRangeModalOpen(true)
+  }
+
+  const closeRangeModal = () => {
+    if (loading) return
+    setRangeError('')
+    setRangeModalOpen(false)
+  }
+
+  const getRangeBounds = (range) => {
+    if (!range || range.mode !== 'range') return { start: null, end: null }
+    const start = new Date(`${range.start}T00:00:00`)
+    const end = new Date(`${range.end}T23:59:59.999`)
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+      return { start: null, end: null }
+    }
+    return { start, end }
+  }
+
+  const loadTickets = async (range) => {
     const token = localStorage.getItem('authToken')
     if (!token) {
-      setLoading(false)
       setError('Authentication token not found.')
+      setTickets([])
+      setHasLoaded(true)
       return
     }
 
-    const loadTickets = async () => {
-      setLoading(true)
-      setError('')
-      try {
-        const res = await fetch('http://localhost:8000/tickets/history', {
-          headers: { Authorization: `Bearer ${token}` },
-        })
-        if (!res.ok) {
-          let detail = 'Failed to load tickets.'
-          try {
-            const data = await res.json()
-            if (data?.detail) detail = data.detail
-          } catch {
-            // ignore parse error
-          }
-          setError(detail)
-          setTickets([])
-        } else {
+    setLoading(true)
+    setError('')
+    try {
+      const res = await fetch('http://localhost:8000/tickets/history', {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (!res.ok) {
+        let detail = 'Failed to load tickets.'
+        try {
           const data = await res.json()
-          setTickets(Array.isArray(data) ? data : [])
+          if (data?.detail) detail = data.detail
+        } catch {
+          // ignore parse error
         }
-      } catch (err) {
-        setError('Network error. Please try again.')
+        setError(detail)
         setTickets([])
-      } finally {
-        setLoading(false)
+        return
+      }
+
+      const data = await res.json()
+      const rawTickets = Array.isArray(data) ? data : []
+
+      if (range?.mode === 'range') {
+        const { start, end } = getRangeBounds(range)
+        if (start && end) {
+          const filtered = rawTickets.filter((ticket) => {
+            const departureDate = toDate(ticket?.departure_date)
+            if (!departureDate) return false
+            return departureDate >= start && departureDate <= end
+          })
+          setTickets(filtered)
+        } else {
+          setTickets([])
+        }
+      } else {
+        setTickets(rawTickets)
+      }
+    } catch (err) {
+      setError('Network error. Please try again.')
+      setTickets([])
+    } finally {
+      setLoading(false)
+      setHasLoaded(true)
+    }
+  }
+
+  const applyRange = async () => {
+    setRangeError('')
+
+    const nextRange = { mode: rangeMode, start: rangeStart, end: rangeEnd }
+
+    if (rangeMode === 'range') {
+      if (!rangeStart || !rangeEnd) {
+        setRangeError('Start date and end date are required.')
+        return
+      }
+
+      const { start, end } = getRangeBounds(nextRange)
+      if (!start || !end) {
+        setRangeError('Invalid date range.')
+        return
+      }
+
+      if (start > end) {
+        setRangeError('Start date must be before or equal to end date.')
+        return
       }
     }
 
-    loadTickets()
-  }, [])
+    setActiveRange(nextRange)
+    setPage(1)
+    setRangeModalOpen(false)
+    await loadTickets(nextRange)
+  }
 
   const formatDate = (value) => {
     const dt = toDate(value)
@@ -201,6 +283,8 @@ function OfficeTicketHistory() {
 
   const handleExport = () => {
     if (!sortedTickets.length) return
+
+    const rangeLabel = activeRange.mode === 'range' && activeRange.start && activeRange.end ? `${activeRange.start}_to_${activeRange.end}` : 'all-time'
 
     const headers = [
       'Name',
@@ -267,7 +351,7 @@ function OfficeTicketHistory() {
 
     const link = document.createElement('a')
     link.href = url
-    link.download = `ticket_history_${new Date().toISOString().slice(0, 10)}.xls`
+    link.download = `ticket_history_${rangeLabel}_${new Date().toISOString().slice(0, 10)}.xls`
     document.body.appendChild(link)
     link.click()
     link.remove()
@@ -326,17 +410,22 @@ function OfficeTicketHistory() {
           </header>
 
           <div className="form-actions">
+            <button type="button" className="btn btn-neutral" onClick={openRangeModal} disabled={loading}>
+              {hasLoaded ? 'Change Range' : 'Select Range'}
+            </button>
             <button
               type="button"
               className="btn btn-outline-brand"
               onClick={handleExport}
-              disabled={loading || !tickets.length}
+              disabled={!hasLoaded || loading || !tickets.length}
               title={tickets.length ? 'Export to Excel (.xls)' : 'No data to export'}
             >
               <i className="bi bi-file-earmark-excel" />
               Export Excel
             </button>
           </div>
+
+          {hasLoaded ? <p className="muted">Range: {getActiveRangeLabel()}</p> : <p className="muted">Range: Not loaded</p>}
 
           <div className="office-table-wrapper">
             <table className="office-table">
@@ -447,6 +536,12 @@ function OfficeTicketHistory() {
                       {error}
                     </td>
                   </tr>
+                ) : !hasLoaded ? (
+                  <tr>
+                    <td colSpan="18" className="muted">
+                      Select a date range to load travel history.
+                    </td>
+                  </tr>
                 ) : tickets.length === 0 ? (
                   <tr>
                     <td colSpan="18" className="muted">
@@ -490,7 +585,7 @@ function OfficeTicketHistory() {
             <button
               type="button"
               className="btn btn-neutral"
-              disabled={loading || currentPage <= 1 || tickets.length === 0}
+              disabled={loading || !hasLoaded || currentPage <= 1 || tickets.length === 0}
               onClick={() => setPage((prev) => Math.max(1, Math.min(prev, totalPages) - 1))}
             >
               Prev
@@ -501,12 +596,112 @@ function OfficeTicketHistory() {
             <button
               type="button"
               className="btn btn-neutral"
-              disabled={loading || currentPage >= totalPages || tickets.length === 0}
+              disabled={loading || !hasLoaded || currentPage >= totalPages || tickets.length === 0}
               onClick={() => setPage((prev) => Math.min(totalPages, Math.min(prev, totalPages) + 1))}
             >
               Next
             </button>
           </div>
+
+          {rangeModalOpen ? (
+            <div
+              className="modal-overlay"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="ticket-range-title"
+              onClick={() => {
+                if (!loading) closeRangeModal()
+              }}
+            >
+              <div
+                className="modal"
+                onClick={(event) => {
+                  event.stopPropagation()
+                }}
+              >
+                <div className="modal-header">
+                  <h2 id="ticket-range-title">Load Travel History</h2>
+                  <button
+                    type="button"
+                    className="modal-close"
+                    onClick={closeRangeModal}
+                    disabled={loading}
+                    aria-label="Close"
+                  >
+                    &times;
+                  </button>
+                </div>
+
+                <p className="muted" style={{ marginTop: 0 }}>
+                  Choose a departure date range to load and export travel history.
+                </p>
+
+                {rangeError ? <p className="error-text">{rangeError}</p> : null}
+
+                <div className="radio-row">
+                  <span>Date range</span>
+                  <div className="radio-options">
+                    <label>
+                      <input
+                        type="radio"
+                        name="ticket-range-mode"
+                        value="all"
+                        checked={rangeMode === 'all'}
+                        onChange={() => setRangeMode('all')}
+                        disabled={loading}
+                      />
+                      All time
+                    </label>
+                    <label>
+                      <input
+                        type="radio"
+                        name="ticket-range-mode"
+                        value="range"
+                        checked={rangeMode === 'range'}
+                        onChange={() => setRangeMode('range')}
+                        disabled={loading}
+                      />
+                      Custom range
+                    </label>
+                  </div>
+                </div>
+
+                {rangeMode === 'range' ? (
+                  <div className="field-grid">
+                    <label className="inline-label">
+                      <span>Start date</span>
+                      <input
+                        type="date"
+                        value={rangeStart}
+                        onChange={(event) => setRangeStart(event.target.value)}
+                        disabled={loading}
+                        required
+                      />
+                    </label>
+                    <label className="inline-label">
+                      <span>End date</span>
+                      <input
+                        type="date"
+                        value={rangeEnd}
+                        onChange={(event) => setRangeEnd(event.target.value)}
+                        disabled={loading}
+                        required
+                      />
+                    </label>
+                  </div>
+                ) : null}
+
+                <div className="modal-actions">
+                  <button type="button" className="btn btn-primary" onClick={applyRange} disabled={loading}>
+                    {loading ? 'Loading...' : 'Load Data'}
+                  </button>
+                  <button type="button" className="btn btn-outline-danger" onClick={closeRangeModal} disabled={loading}>
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : null}
         </section>
       </div>
     </MainLayout>
