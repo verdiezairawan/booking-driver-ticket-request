@@ -408,8 +408,8 @@ function OfficeDriverHistory() {
       'OT minutes',
       'Type of Trip',
       'Driver',
-      'Starting Mileage',
-      'Ending Mileage',
+      'Starting Kilometer',
+      'Ending Kilometer',
       'Total Distance',
       'Status',
     ]
@@ -621,12 +621,12 @@ function OfficeDriverHistory() {
                   </th>
                   <th>
                     <button type="button" className="table-sort" onClick={() => toggleSort('starting_mileage')}>
-                      Starting Mileage {renderSortIcon('starting_mileage')}
+                      Starting Kilometer {renderSortIcon('starting_mileage')}
                     </button>
                   </th>
                   <th>
                     <button type="button" className="table-sort" onClick={() => toggleSort('ending_mileage')}>
-                      Ending Mileage {renderSortIcon('ending_mileage')}
+                      Ending Kilometer {renderSortIcon('ending_mileage')}
                     </button>
                   </th>
                   <th>
