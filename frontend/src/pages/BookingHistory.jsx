@@ -162,6 +162,11 @@ function BookingHistory() {
                 <thead>
                   <tr>
                     <th>Submission Date</th>
+                    <th>Name</th>
+                    <th>National ID</th>
+                    <th>Dept/Job Position</th>
+                    <th>Phone</th>
+                    <th>Email</th>
                     <th>Pickup Location</th>
                     <th>Destination</th>
                     <th>Trip Type</th>
@@ -173,7 +178,7 @@ function BookingHistory() {
                 <tbody>
                   {bookings.length === 0 ? (
                     <tr>
-                      <td colSpan="7" className="muted">
+                      <td colSpan="12" className="muted">
                         No driver bookings yet.
                       </td>
                     </tr>
@@ -185,6 +190,11 @@ function BookingHistory() {
                       return (
                         <tr key={booking.id}>
                           <td>{formatDateOnly(booking.created_at)}</td>
+                          <td className="cell-wrap">{booking.requester_name || '-'}</td>
+                          <td>{booking.requester_nik || '-'}</td>
+                          <td className="cell-wrap">{booking.requester_dept_job_position || '-'}</td>
+                          <td>{booking.requester_phone || '-'}</td>
+                          <td className="cell-wrap">{booking.requester_email || '-'}</td>
                           <td className="cell-wrap">{booking.pickup_location || '-'}</td>
                           <td className="cell-wrap">{booking.destination || '-'}</td>
                           <td>{formatTripType(booking.trip_type)}</td>
