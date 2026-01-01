@@ -20,6 +20,9 @@ function OfficeDriverHistory() {
   const [bookings, setBookings] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [actionLoadingId, setActionLoadingId] = useState('')
+  const [actionError, setActionError] = useState('')
+  const [actionMessage, setActionMessage] = useState('')
   const [page, setPage] = useState(1)
   const [sortConfig, setSortConfig] = useState({ key: '', direction: 'asc' })
   const [hasLoaded, setHasLoaded] = useState(false)
@@ -308,6 +311,68 @@ function OfficeDriverHistory() {
     return value
   }
 
+  const getBookingStatus = (booking) => {
+    const raw = String(booking?.status || 'pending').toLowerCase()
+    if (raw === 'approved') {
+      const hasStarted = booking?.starting_mileage !== null && booking?.starting_mileage !== undefined
+      if (hasStarted || booking?.started_at) return 'in_progress'
+    }
+    return raw
+  }
+
+  const formatStatusText = (value) => {
+    if (!value) return '-'
+    return String(value).replace(/_/g, ' ')
+  }
+
+  const canCancelBooking = (booking) => {
+    const status = getBookingStatus(booking)
+    const hasStarted = booking?.starting_mileage !== null && booking?.starting_mileage !== undefined
+    return status === 'approved' && !hasStarted && !booking?.started_at
+  }
+
+  const handleCancelBooking = async (booking) => {
+    const confirmed = window.confirm('Cancel this approved booking?')
+    if (!confirmed) return
+
+    const token = localStorage.getItem('authToken')
+    if (!token) {
+      setActionError('Authentication token not found.')
+      return
+    }
+
+    setActionLoadingId(booking.id)
+    setActionError('')
+    setActionMessage('')
+
+    try {
+      const res = await fetch(`http://localhost:8000/bookings/${booking.id}/cancel`, {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${token}` },
+      })
+
+      if (!res.ok) {
+        let detail = 'Failed to cancel booking.'
+        try {
+          const data = await res.json()
+          if (data?.detail) detail = data.detail
+        } catch {
+          // ignore parse error
+        }
+        setActionError(detail)
+        return
+      }
+
+      const updated = await res.json()
+      setBookings((prev) => prev.map((b) => (b.id === booking.id ? { ...b, ...updated } : b)))
+      setActionMessage('Booking cancelled.')
+    } catch (err) {
+      setActionError('Network error. Please try again.')
+    } finally {
+      setActionLoadingId('')
+    }
+  }
+
   function getDurationMinutes(booking) {
     const startedAt = toDate(booking?.started_at)
     const completedAt = toDate(booking?.completed_at)
@@ -435,7 +500,7 @@ function OfficeDriverHistory() {
       booking.starting_mileage ?? '',
       booking.ending_mileage ?? '',
       formatDistance(booking),
-      booking.status || '',
+      formatStatusText(getBookingStatus(booking)),
     ])
 
     const headerHtml = `<tr>${headers.map((header) => `<th>${escapeHtml(header)}</th>`).join('')}</tr>`
@@ -525,6 +590,8 @@ function OfficeDriverHistory() {
           </div>
 
           {hasLoaded ? <p className="muted">Range: {getActiveRangeLabel()}</p> : <p className="muted">Range: Not loaded</p>}
+          {!loading && actionMessage ? <p className="success-text">{actionMessage}</p> : null}
+          {!loading && actionError ? <p className="error-text">{actionError}</p> : null}
 
           <div className="office-table-wrapper">
             <table className="office-table">
@@ -639,30 +706,31 @@ function OfficeDriverHistory() {
                       Status {renderSortIcon('status')}
                     </button>
                   </th>
+                  <th>Action</th>
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan="21" className="muted">
+                    <td colSpan="22" className="muted">
                       Loading...
                     </td>
                   </tr>
                 ) : error ? (
                   <tr>
-                    <td colSpan="21" className="error-text">
+                    <td colSpan="22" className="error-text">
                       {error}
                     </td>
                   </tr>
                 ) : !hasLoaded ? (
                   <tr>
-                    <td colSpan="21" className="muted">
+                    <td colSpan="22" className="muted">
                       Select a date range to load driver history.
                     </td>
                   </tr>
                 ) : bookings.length === 0 ? (
                   <tr>
-                    <td colSpan="21" className="muted">
+                    <td colSpan="22" className="muted">
                       No driver history found.
                     </td>
                   </tr>
@@ -691,9 +759,23 @@ function OfficeDriverHistory() {
                       <td>{formatDistance(booking)}</td>
                       <td>
                         {booking.status ? (
-                          <span className={`status-badge status-${String(booking.status).toLowerCase()}`}>
-                            {booking.status}
+                          <span className={`status-badge status-${getBookingStatus(booking)}`}>
+                            {formatStatusText(getBookingStatus(booking))}
                           </span>
+                        ) : (
+                          '-'
+                        )}
+                      </td>
+                      <td>
+                        {canCancelBooking(booking) ? (
+                          <button
+                            type="button"
+                            className="btn btn-danger"
+                            onClick={() => handleCancelBooking(booking)}
+                            disabled={actionLoadingId === booking.id || loading}
+                          >
+                            {actionLoadingId === booking.id ? 'Cancelling...' : 'Cancel'}
+                          </button>
                         ) : (
                           '-'
                         )}

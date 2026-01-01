@@ -1117,6 +1117,11 @@
   color: #15803d;
 }
 
+.status-in_progress {
+  background-color: #dbeafe;
+  color: #1d4ed8;
+}
+
 .status-rejected {
   background-color: var(--brand-danger-soft);
   color: var(--brand-danger);

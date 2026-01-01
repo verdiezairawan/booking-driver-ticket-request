@@ -354,6 +354,22 @@ function DriverHome() {
     }
   }
 
+  const getBookingStatus = (booking) => {
+    const raw = String(booking?.status || 'pending').toLowerCase()
+
+    if (raw === 'approved') {
+      const hasStarted = booking?.starting_mileage !== null && booking?.starting_mileage !== undefined
+      if (hasStarted || booking?.started_at) return 'in_progress'
+    }
+
+    return raw
+  }
+
+  const formatStatusText = (value) => {
+    if (!value) return '-'
+    return String(value).replace(/_/g, ' ')
+  }
+
   function toDateKey(date) {
     if (!(date instanceof Date) || Number.isNaN(date.getTime())) return ''
     const year = String(date.getFullYear())
@@ -362,17 +378,24 @@ function DriverHome() {
     return `${year}-${month}-${day}`
   }
 
+  const normalizedBookings = useMemo(
+    () => bookings.map((booking) => ({ ...booking, status: getBookingStatus(booking) })),
+    [bookings]
+  )
+
   const counts = useMemo(() => {
-    const activeCount = bookings.filter((b) => (b.status || 'pending') !== 'completed').length
-    const completedCount = bookings.filter((b) => (b.status || 'pending') === 'completed').length
+    const activeCount = normalizedBookings.filter((b) => b.status === 'approved' || b.status === 'in_progress').length
+    const completedCount = normalizedBookings.filter((b) => b.status === 'completed').length
     return { active: activeCount, completed: completedCount }
-  }, [bookings])
+  }, [normalizedBookings])
 
   const items = useMemo(() => {
-    const normalized = bookings.map((b) => ({ ...b, status: b.status || 'pending' }))
     const selectedKey = toDateKey(selectedDate)
 
-    const dateFiltered = normalized.filter((booking) => {
+    const tabStatuses = tab === TABS.completed ? ['completed'] : ['approved', 'in_progress']
+
+    const dateFiltered = normalizedBookings.filter((booking) => {
+      if (!tabStatuses.includes(booking.status)) return false
       if (!booking?.departure_time) return false
       const dt = new Date(booking.departure_time)
       if (Number.isNaN(dt.getTime())) return false
@@ -399,7 +422,7 @@ function DriverHome() {
     })
 
     return sorted
-  }, [bookings, tab, selectedDate])
+  }, [normalizedBookings, tab, selectedDate])
 
   const monthLabel = useMemo(() => {
     const label = calendarMonth.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })
@@ -430,17 +453,17 @@ function DriverHome() {
 
   const taskMetaByDate = useMemo(() => {
     const map = new Map()
-    bookings.forEach((booking) => {
+    normalizedBookings.forEach((booking) => {
+      if (!['approved', 'in_progress', 'completed'].includes(booking.status)) return
       if (!booking?.departure_time) return
       const dt = new Date(booking.departure_time)
       if (Number.isNaN(dt.getTime())) return
       const key = toDateKey(dt)
       if (!key) return
 
-      const status = String(booking.status || 'pending').toLowerCase()
       const existing = map.get(key) || { total: 0, incomplete: 0, completed: 0 }
       existing.total += 1
-      if (status === 'completed') {
+      if (booking.status === 'completed') {
         existing.completed += 1
       } else {
         existing.incomplete += 1
@@ -448,7 +471,7 @@ function DriverHome() {
       map.set(key, existing)
     })
     return map
-  }, [bookings])
+  }, [normalizedBookings])
 
   const selectedKey = toDateKey(selectedDate)
   const todayKey = useMemo(() => toDateKey(new Date()), [])
@@ -664,7 +687,7 @@ function DriverHome() {
                         </span>
                       </h2>
                       <div className="driver-subrow">
-                        <span className={`status-badge status-${booking.status}`}>{booking.status}</span>
+                        <span className={`status-badge status-${booking.status}`}>{formatStatusText(booking.status)}</span>
                         <span className="muted">
                           Departure: <strong>{formatDeparture(booking.departure_time)}</strong>
                         </span>

@@ -308,7 +308,7 @@ def update_booking(booking_id: str, payload: BookingCreate, current_user=Depends
 @router.patch("/{booking_id}/cancel", response_model=BookingResponse)
 def cancel_booking(booking_id: str, current_user=Depends(get_current_user)):
     uid = current_user["uid"]
-    ensure_role(uid, ("user",))
+    role = ensure_role(uid, ("user", "office_coordinator", "superadmin"))
 
     doc_ref = db.collection("bookings").document(booking_id)
     snapshot = doc_ref.get()
@@ -316,16 +316,32 @@ def cancel_booking(booking_id: str, current_user=Depends(get_current_user)):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Booking not found")
 
     data = snapshot.to_dict() or {}
-    if data.get("user_id") != uid:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
+    booking_status = data.get("status", "pending")
 
-    if data.get("status", "pending") != "pending":
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Only pending bookings can be canceled")
+    if role == "user":
+        if data.get("user_id") != uid:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
+
+        if booking_status != "pending":
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Only pending bookings can be canceled")
+    else:
+        if booking_status != "approved":
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Only approved bookings can be canceled by office coordinator",
+            )
+
+        if data.get("starting_mileage") is not None or data.get("started_at") is not None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Booking already started and cannot be canceled",
+            )
 
     doc_ref.update(
         {
             "status": "cancelled",
             "cancelled_by": uid,
+            "cancelled_at": firestore.SERVER_TIMESTAMP,
             "updated_at": firestore.SERVER_TIMESTAMP,
         }
     )
@@ -357,6 +373,7 @@ def start_booking(booking_id: str, payload: BookingStart, current_user=Depends(g
     doc_ref.update(
         {
             "starting_mileage": payload.starting_mileage,
+            "status": "in_progress",
             "started_at": firestore.SERVER_TIMESTAMP,
             "updated_at": firestore.SERVER_TIMESTAMP,
         }
@@ -380,8 +397,8 @@ def complete_booking(booking_id: str, payload: BookingComplete, current_user=Dep
     if data.get("driver_id") != uid:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
 
-    if data.get("status") != "approved":
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Booking is not in an approvable state")
+    if data.get("status") not in ("approved", "in_progress"):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Booking is not in a completable state")
 
     starting = data.get("starting_mileage")
     if starting is None:
