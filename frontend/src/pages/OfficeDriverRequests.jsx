@@ -8,9 +8,9 @@ const menuItems = [
   { label: 'Travel Requests', icon: 'bi-ticket-perforated' },
   { label: 'Driver Requests', icon: 'bi-car-front' },
   { label: 'Travel Status & History', icon: 'bi-clock-history' },
-  { label: 'Driver History', icon: 'bi-card-list' },
-  { label: 'Travel Accommodation', icon: 'bi-building' },
-  { label: 'Assign Drivers', icon: 'bi-person-check' },
+  { label: 'Booking Driver Status & History', icon: 'bi-card-list' },
+  { label: 'Travel Requests Assign', icon: 'bi-building' },
+  { label: 'Booking Driver Assign', icon: 'bi-person-check' },
   { label: 'Manage User', icon: 'bi-people' },
 ]
 
@@ -271,9 +271,9 @@ function OfficeDriverRequests() {
     if (item === 'Travel Requests') navigate('/office/ticket-requests')
     if (item === 'Driver Requests') navigate('/office/driver-requests')
     if (item === 'Travel Status & History') navigate('/office/ticket-history')
-    if (item === 'Driver History') navigate('/office/driver-history')
-    if (item === 'Travel Accommodation') navigate('/office/travel-accommodation')
-    if (item === 'Assign Drivers') navigate('/office/assign-drivers')
+    if (item === 'Booking Driver Status & History') navigate('/office/driver-history')
+    if (item === 'Travel Requests Assign') navigate('/office/travel-accommodation')
+    if (item === 'Booking Driver Assign') navigate('/office/assign-drivers')
     if (item === 'Manage User') navigate('/office/manage-user')
   }
 
