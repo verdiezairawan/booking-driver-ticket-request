@@ -5,11 +5,11 @@ import useOfficeSidebar from '../hooks/useOfficeSidebar'
 
 const menuItems = [
   { label: 'Dashboard', icon: 'bi-speedometer2' },
-  { label: 'Ticket Requests', icon: 'bi-ticket-perforated' },
-  { label: 'Driver Requests', icon: 'bi-car-front' },
-  { label: 'Ticket History', icon: 'bi-clock-history' },
+  { label: 'Travel Requests', icon: 'bi-ticket-perforated' },
+  { label: 'Travel Status & History', icon: 'bi-clock-history' },
+  { label: 'Travel Assign', icon: 'bi-building' },
+  { label: 'Booking Driver Requests', icon: 'bi-car-front' },
   { label: 'Booking Driver Status & History', icon: 'bi-card-list' },
-  { label: 'Travel Requests Assign', icon: 'bi-building' },
   { label: 'Booking Driver Assign', icon: 'bi-person-check' },
   { label: 'Manage User', icon: 'bi-people' },
 ]
@@ -89,11 +89,11 @@ function AdminHome() {
 
   const handleNavigate = (item) => {
     if (item === 'Dashboard') navigate('/admin/home')
-    if (item === 'Ticket Requests') navigate('/office/ticket-requests')
-    if (item === 'Driver Requests') navigate('/office/driver-requests')
-    if (item === 'Ticket History') navigate('/office/ticket-history')
+    if (item === 'Travel Requests') navigate('/office/ticket-requests')
+    if (item === 'Travel Status & History') navigate('/office/ticket-history')
     if (item === 'Booking Driver Status & History') navigate('/office/driver-history')
-    if (item === 'Travel Requests Assign') navigate('/office/travel-accommodation')
+    if (item === 'Travel Assign') navigate('/office/travel-accommodation')
+    if (item === 'Booking Driver Requests') navigate('/office/driver-requests')
     if (item === 'Booking Driver Assign') navigate('/office/assign-drivers')
     if (item === 'Manage User') navigate('/office/manage-user')
   }
