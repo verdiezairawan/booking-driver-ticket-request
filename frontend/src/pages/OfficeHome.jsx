@@ -5,9 +5,9 @@ import useOfficeSidebar from '../hooks/useOfficeSidebar'
 
 const menuItems = [
   { label: 'Dashboard', icon: 'bi-speedometer2' },
-  { label: 'Travel Accommodation Requests', icon: 'bi-ticket-perforated' },
+  { label: 'Travel Requests', icon: 'bi-ticket-perforated' },
   { label: 'Driver Requests', icon: 'bi-car-front' },
-  { label: 'Travel Accommodation History', icon: 'bi-clock-history' },
+  { label: 'Travel Status & History', icon: 'bi-clock-history' },
   { label: 'Driver History', icon: 'bi-card-list' },
   { label: 'Travel Accommodation', icon: 'bi-building' },
   { label: 'Assign Drivers', icon: 'bi-person-check' },
@@ -75,9 +75,9 @@ function OfficeHome() {
 
   const handleNavigate = (item) => {
     if (item === 'Dashboard') navigate('/office/home')
-    if (item === 'Travel Accommodation Requests') navigate('/office/ticket-requests')
+    if (item === 'Travel Request') navigate('/office/ticket-requests')
     if (item === 'Driver Requests') navigate('/office/driver-requests')
-    if (item === 'Travel Accommodation History') navigate('/office/ticket-history')
+    if (item === 'Travel Status & History') navigate('/office/ticket-history')
     if (item === 'Driver History') navigate('/office/driver-history')
     if (item === 'Travel Accommodation') navigate('/office/travel-accommodation')
     if (item === 'Assign Drivers') navigate('/office/assign-drivers')
