@@ -12,12 +12,7 @@ from main import get_current_user
 router = APIRouter(prefix="/tickets", tags=["tickets"])
 
 
-class TicketCreate(BaseModel):
-    full_name: str
-    dept_job_position: Optional[str] = None
-    phone_number: str
-    email: str
-    national_id: str
+class TicketBase(BaseModel):
     destination: str
     departure_point: str
     departure_date: date
@@ -32,6 +27,18 @@ class TicketCreate(BaseModel):
     special_requests: Optional[str] = None
     superior_approval_note: Optional[str] = None
     additional_notes: Optional[str] = None
+
+
+class TicketCreate(TicketBase):
+    full_name: str
+    dept_job_position: Optional[str] = None
+    phone_number: str
+    email: str
+    national_id: str
+
+
+class TicketUserCreate(TicketBase):
+    pass
 
 
 class TicketResponse(TicketCreate):
@@ -81,9 +88,11 @@ def ensure_user_role(uid: str):
     if not doc.exists:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User profile not found")
 
-    role = doc.to_dict().get("role")
+    data = doc.to_dict() or {}
+    role = data.get("role")
     if role != "user":
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
+    return data
 
 
 def ensure_role(uid: str, allowed: tuple[str, ...]):
@@ -137,9 +146,31 @@ def list_ticket_history(current_user=Depends(get_current_user)):
 
 
 @router.post("", response_model=TicketResponse)
-def create_ticket(payload: TicketCreate, current_user=Depends(get_current_user)):
+def create_ticket(payload: TicketUserCreate, current_user=Depends(get_current_user)):
     uid = current_user["uid"]
-    ensure_user_role(uid)
+    user_profile = ensure_user_role(uid)
+
+    full_name = user_profile.get("name") or user_profile.get("full_name")
+    dept_job_position = user_profile.get("dept_job_position") or user_profile.get("department") or user_profile.get("job_position")
+    phone_number = user_profile.get("phone") or user_profile.get("phone_number")
+    national_id = user_profile.get("nik") or user_profile.get("national_id")
+    email = user_profile.get("email") or current_user.get("email")
+
+    missing_fields = []
+    if not full_name:
+        missing_fields.append("name")
+    if not phone_number:
+        missing_fields.append("phone")
+    if not national_id:
+        missing_fields.append("nik")
+    if not email:
+        missing_fields.append("email")
+
+    if missing_fields:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"User profile incomplete. Missing: {', '.join(missing_fields)}",
+        )
 
     departure_date_value = payload.departure_date
     if isinstance(departure_date_value, date) and not isinstance(departure_date_value, datetime):
@@ -148,6 +179,11 @@ def create_ticket(payload: TicketCreate, current_user=Depends(get_current_user))
     data = {
         **payload.model_dump(),
         "departure_date": departure_date_value,
+        "full_name": str(full_name),
+        "dept_job_position": dept_job_position,
+        "phone_number": str(phone_number),
+        "email": str(email),
+        "national_id": str(national_id),
         "user_id": uid,
         "status": "pending",
         "created_at": firestore.SERVER_TIMESTAMP,
@@ -215,7 +251,7 @@ def update_ticket_status(ticket_id: str, payload: TicketStatusUpdate, current_us
 
 
 @router.patch("/{ticket_id}", response_model=TicketResponse)
-def update_ticket(ticket_id: str, payload: TicketCreate, current_user=Depends(get_current_user)):
+def update_ticket(ticket_id: str, payload: TicketUserCreate, current_user=Depends(get_current_user)):
     uid = current_user["uid"]
     ensure_user_role(uid)
 

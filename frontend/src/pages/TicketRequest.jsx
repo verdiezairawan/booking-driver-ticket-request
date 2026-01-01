@@ -3,11 +3,6 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import MainLayout from '../components/MainLayout'
 
 const initialForm = {
-  full_name: '',
-  dept_job_position: '',
-  phone_number: '',
-  email: '',
-  national_id: '',
   destination: '',
   departure_point: '',
   departure_date: '',
@@ -64,11 +59,6 @@ function TicketRequest() {
     setEditingTicketId(ticket.id)
     setForm({
       ...initialForm,
-      full_name: ticket.full_name || '',
-      dept_job_position: ticket.dept_job_position || '',
-      phone_number: ticket.phone_number || '',
-      email: ticket.email || '',
-      national_id: ticket.national_id || '',
       destination: ticket.destination || '',
       departure_point: ticket.departure_point || '',
       departure_date: ticket.departure_date ? String(ticket.departure_date).slice(0, 10) : '',
@@ -163,70 +153,6 @@ function TicketRequest() {
         </header>
 
         <form className="ticket-form" onSubmit={handleSubmit}>
-            <section className="field-group">
-              <div className="field-heading">
-                <div className="heading-icon" aria-hidden="true">
-                  <i className="bi bi-person-badge" />
-                </div>
-                <div>
-                  <h2>Identity & Contact Information</h2>
-                  <p className="muted">Tell us who is traveling</p>
-                </div>
-              </div>
-            <div className="field-grid">
-              <label className="inline-label">
-                <span>Full name</span>
-                <input
-                  type="text"
-                  placeholder="Full name"
-                  value={form.full_name}
-                  onChange={handleChange('full_name')}
-                  required
-                />
-              </label>
-              <label className="inline-label">
-                <span>User Dept/Job Position</span>
-                <input
-                  type="text"
-                  placeholder="User Dept/Job Position"
-                  value={form.dept_job_position}
-                  onChange={handleChange('dept_job_position')}
-                  required
-                />
-              </label>
-              <label className="inline-label">
-                <span>Phone number</span>
-                <input
-                  type="tel"
-                  placeholder="Phone Number"
-                  value={form.phone_number}
-                  onChange={handleChange('phone_number')}
-                  required
-                />
-              </label>
-              <label className="inline-label">
-                <span>Email</span>
-                <input
-                  type="email"
-                  placeholder="Email address"
-                  value={form.email}
-                  onChange={handleChange('email')}
-                  required
-                />
-              </label>
-              <label className="inline-label">
-                <span>National ID</span>
-                <input
-                  type="text"
-                  placeholder="National ID"
-                  value={form.national_id}
-                  onChange={handleChange('national_id')}
-                  required
-                />
-              </label>
-            </div>
-          </section>
-
           <section className="field-group">
             <div className="field-heading">
               <div className="heading-icon" aria-hidden="true">

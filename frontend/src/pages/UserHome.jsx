@@ -160,7 +160,7 @@ function UserHome() {
                 <i className="bi bi-plus-lg" />
               </div>
               <div className="action-content">
-                <h3>Make a Travel Accommodation Request</h3>
+                <h3>Make a Travel Request</h3>
                 <p className="muted">Submit a request for business or travel needs</p>
                 <span className="link-cta">
                   Make Request <span aria-hidden="true">&rarr;</span>
@@ -198,7 +198,7 @@ function UserHome() {
                 <i className="bi bi-ticket-perforated" />
               </div>
               <div className="action-content">
-                <h3>Travel Accommodation History</h3>
+                <h3>Travel Status & History</h3>
                 <p className="muted">View all your Travel Accommodation requests</p>
                 <span className="link-cta">
                   View <span aria-hidden="true">&rarr;</span>
