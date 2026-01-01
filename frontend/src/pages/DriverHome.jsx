@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import MainLayout from '../components/MainLayout'
 
 const TABS = {
@@ -26,7 +26,10 @@ function DriverHome() {
   const [activeBooking, setActiveBooking] = useState(null)
   const [startingMileage, setStartingMileage] = useState('')
   const [endingMileage, setEndingMileage] = useState('')
-  const [completionProof, setCompletionProof] = useState('')
+  const signatureCanvasRef = useRef(null)
+  const signatureDrawingRef = useRef(false)
+  const signatureLastPointRef = useRef({ x: 0, y: 0 })
+  const signatureHasInkRef = useRef(false)
 
   const completedDistance = useMemo(() => {
     const startingValue = Number(activeBooking?.starting_mileage)
@@ -104,7 +107,6 @@ function DriverHome() {
   const openFinishModal = (booking) => {
     setActiveBooking(booking)
     setEndingMileage('')
-    setCompletionProof('')
     setFinishModalOpen(true)
     setActionMessage('')
     setActionError('')
@@ -116,7 +118,118 @@ function DriverHome() {
     setActiveBooking(null)
     setStartingMileage('')
     setEndingMileage('')
-    setCompletionProof('')
+    signatureDrawingRef.current = false
+    signatureHasInkRef.current = false
+  }
+
+  const resetSignatureCanvas = () => {
+    const canvas = signatureCanvasRef.current
+    if (!canvas) return
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height)
+    ctx.fillStyle = '#ffffff'
+    ctx.fillRect(0, 0, canvas.width, canvas.height)
+    signatureHasInkRef.current = false
+  }
+
+  const setupSignatureCanvas = () => {
+    const canvas = signatureCanvasRef.current
+    if (!canvas) return
+
+    const width = 700
+    const height = 200
+    canvas.width = width
+    canvas.height = height
+    resetSignatureCanvas()
+
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+    ctx.lineWidth = 2.5
+    ctx.lineCap = 'round'
+    ctx.lineJoin = 'round'
+    ctx.strokeStyle = '#111827'
+  }
+
+  useEffect(() => {
+    if (!finishModalOpen) return
+    setupSignatureCanvas()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [finishModalOpen])
+
+  const getSignaturePoint = (event) => {
+    const canvas = signatureCanvasRef.current
+    if (!canvas) return null
+    const rect = canvas.getBoundingClientRect()
+    const scaleX = canvas.width / rect.width
+    const scaleY = canvas.height / rect.height
+    return {
+      x: (event.clientX - rect.left) * scaleX,
+      y: (event.clientY - rect.top) * scaleY,
+    }
+  }
+
+  const handleSignaturePointerDown = (event) => {
+    if (event.button !== undefined && event.button !== 0) return
+    const canvas = signatureCanvasRef.current
+    if (!canvas) return
+
+    event.preventDefault()
+    const point = getSignaturePoint(event)
+    if (!point) return
+
+    signatureDrawingRef.current = true
+    signatureLastPointRef.current = point
+    const ctx = canvas.getContext('2d')
+    if (ctx) {
+      ctx.fillStyle = '#111827'
+      ctx.beginPath()
+      ctx.arc(point.x, point.y, 1.25, 0, Math.PI * 2)
+      ctx.fill()
+      signatureHasInkRef.current = true
+    }
+
+    try {
+      canvas.setPointerCapture?.(event.pointerId)
+    } catch {
+      // ignore capture errors
+    }
+  }
+
+  const handleSignaturePointerMove = (event) => {
+    if (!signatureDrawingRef.current) return
+    const canvas = signatureCanvasRef.current
+    if (!canvas) return
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+
+    event.preventDefault()
+    const next = getSignaturePoint(event)
+    if (!next) return
+
+    const prev = signatureLastPointRef.current
+    ctx.beginPath()
+    ctx.moveTo(prev.x, prev.y)
+    ctx.lineTo(next.x, next.y)
+    ctx.stroke()
+
+    signatureLastPointRef.current = next
+    signatureHasInkRef.current = true
+  }
+
+  const handleSignaturePointerEnd = (event) => {
+    if (!signatureDrawingRef.current) return
+    signatureDrawingRef.current = false
+
+    const canvas = signatureCanvasRef.current
+    if (!canvas) return
+    event.preventDefault()
+    try {
+      canvas.releasePointerCapture?.(event.pointerId)
+    } catch {
+      // ignore release errors
+    }
   }
 
   const handleStart = async () => {
@@ -184,11 +297,6 @@ function DriverHome() {
       return
     }
 
-    if (!completionProof.trim()) {
-      setActionError('Completion proof is required.')
-      return
-    }
-
     const token = localStorage.getItem('authToken')
     if (!token) {
       setActionError('Authentication token not found.')
@@ -200,6 +308,13 @@ function DriverHome() {
     setActionError('')
 
     try {
+      const canvas = signatureCanvasRef.current
+      const signature = signatureHasInkRef.current && canvas ? canvas.toDataURL('image/png') : ''
+      if (!signature) {
+        setActionError('Passenger signature is required.')
+        return
+      }
+
       const res = await fetch(`http://localhost:8000/bookings/${activeBooking.id}/complete`, {
         method: 'PATCH',
         headers: {
@@ -208,7 +323,7 @@ function DriverHome() {
         },
         body: JSON.stringify({
           ending_mileage: endingValue,
-          completion_proof: completionProof.trim(),
+          completion_proof: signature,
         }),
       })
 
@@ -694,16 +809,31 @@ function DriverHome() {
                     Ending mileage must be greater than or equal to starting mileage.
                   </p>
                 ) : null}
-                <label className="inline-label">
-                  <span>Proof of completion (text)</span>
-                  <input
-                    type="text"
-                    placeholder="Proof (photo link / description)"
-                    value={completionProof}
-                    onChange={(e) => setCompletionProof(e.target.value)}
-                    required
-                  />
-                </label>
+                <div className="signature-field" style={{ gridColumn: '1 / -1' }}>
+                  <span className="signature-label">Passenger signature</span>
+                  <div className="signature-pad">
+                    <canvas
+                      ref={signatureCanvasRef}
+                      className="signature-canvas"
+                      onPointerDown={handleSignaturePointerDown}
+                      onPointerMove={handleSignaturePointerMove}
+                      onPointerUp={handleSignaturePointerEnd}
+                      onPointerCancel={handleSignaturePointerEnd}
+                      onPointerLeave={handleSignaturePointerEnd}
+                    />
+                  </div>
+                  <div className="signature-actions">
+                    <button
+                      type="button"
+                      className="btn btn-neutral"
+                      onClick={resetSignatureCanvas}
+                      disabled={processing[activeBooking?.id]}
+                    >
+                      Clear signature
+                    </button>
+                    <span className="signature-hint">Ask the passenger to sign above.</span>
+                  </div>
+                </div>
               </div>
 
               <div className="modal-actions">
