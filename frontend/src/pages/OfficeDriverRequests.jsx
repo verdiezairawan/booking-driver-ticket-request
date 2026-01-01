@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import MainLayout from '../components/MainLayout'
 import useOfficeSidebar from '../hooks/useOfficeSidebar'
@@ -28,9 +28,13 @@ function OfficeDriverRequests() {
   const [drivers, setDrivers] = useState([])
   const [driversLoading, setDriversLoading] = useState(false)
   const [driversError, setDriversError] = useState('')
+  const [unavailableDriverIds, setUnavailableDriverIds] = useState([])
+  const [availabilityLoading, setAvailabilityLoading] = useState(false)
+  const [availabilityError, setAvailabilityError] = useState('')
   const [assignModalOpen, setAssignModalOpen] = useState(false)
   const [assignTarget, setAssignTarget] = useState(null)
   const [selectedDriverId, setSelectedDriverId] = useState('')
+  const availabilityRequestIdRef = useRef(0)
 
   const pageSize = 10
   const totalPages = Math.max(1, Math.ceil(bookings.length / pageSize))
@@ -139,18 +143,106 @@ function OfficeDriverRequests() {
     loadBookings()
   }, [])
 
+  const loadUnavailableDrivers = async (booking) => {
+    availabilityRequestIdRef.current += 1
+    const requestId = availabilityRequestIdRef.current
+
+    if (!booking?.departure_time) {
+      setUnavailableDriverIds([])
+      setAvailabilityError('')
+      setAvailabilityLoading(false)
+      return
+    }
+
+    const token = localStorage.getItem('authToken')
+    if (!token) {
+      setUnavailableDriverIds([])
+      setAvailabilityError('Authentication token not found.')
+      setAvailabilityLoading(false)
+      return
+    }
+
+    setAvailabilityLoading(true)
+    setAvailabilityError('')
+    setUnavailableDriverIds([])
+
+    try {
+      const url = new URL('http://localhost:8000/bookings/unavailable-drivers')
+      url.searchParams.set('departure_time', booking.departure_time)
+
+      const res = await fetch(url.toString(), {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+
+      if (!res.ok) {
+        let detail = 'Failed to check driver availability.'
+        try {
+          const data = await res.json()
+          if (data?.detail) detail = data.detail
+        } catch {
+          // ignore parse error
+        }
+
+        if (requestId === availabilityRequestIdRef.current) {
+          setUnavailableDriverIds([])
+          setAvailabilityError(detail)
+        }
+        return
+      }
+
+      const data = await res.json()
+      const ids = Array.isArray(data) ? data : []
+      const normalized = ids.filter((id) => typeof id === 'string' && id.trim().length)
+
+      if (requestId === availabilityRequestIdRef.current) {
+        setUnavailableDriverIds(normalized)
+        setAvailabilityError('')
+      }
+    } catch (err) {
+      if (requestId === availabilityRequestIdRef.current) {
+        setUnavailableDriverIds([])
+        setAvailabilityError('Network error. Please try again.')
+      }
+    } finally {
+      if (requestId === availabilityRequestIdRef.current) {
+        setAvailabilityLoading(false)
+      }
+    }
+  }
+
+  const availableDrivers = useMemo(() => {
+    if (!drivers.length) return []
+    if (!unavailableDriverIds.length) return drivers
+    const unavailable = new Set(unavailableDriverIds)
+    return drivers.filter((driver) => !unavailable.has(driver.uid))
+  }, [drivers, unavailableDriverIds])
+
+  useEffect(() => {
+    if (!selectedDriverId) return
+    if (unavailableDriverIds.includes(selectedDriverId)) {
+      setSelectedDriverId('')
+    }
+  }, [selectedDriverId, unavailableDriverIds])
+
   const openAssignModal = (booking) => {
     setAssignTarget(booking)
     setSelectedDriverId('')
+    setUnavailableDriverIds([])
+    setAvailabilityError('')
     setAssignModalOpen(true)
     setActionMessage('')
     setActionError('')
+    loadUnavailableDrivers(booking)
   }
 
   const closeAssignModal = () => {
+    availabilityRequestIdRef.current += 1
     setAssignModalOpen(false)
     setAssignTarget(null)
     setSelectedDriverId('')
+    setUnavailableDriverIds([])
+    setAvailabilityError('')
+    setAvailabilityLoading(false)
   }
 
   const handleAssign = async () => {
@@ -189,6 +281,7 @@ function OfficeDriverRequests() {
           // ignore parse error
         }
         setActionError(detail)
+        loadUnavailableDrivers(assignTarget)
         return
       }
 
@@ -256,6 +349,17 @@ function OfficeDriverRequests() {
     if (!value) return '-'
     const dt = new Date(value)
     return Number.isNaN(dt.getTime()) ? '-' : dt.toLocaleDateString('en-GB')
+  }
+
+  const formatTime = (value) => {
+    if (!value) return '-'
+    const dt = new Date(value)
+    if (Number.isNaN(dt.getTime())) return '-'
+    return dt.toLocaleTimeString('en-GB', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    })
   }
 
   const formatTripType = (value) => {
@@ -333,6 +437,7 @@ function OfficeDriverRequests() {
                   <th>Destination</th>
                   <th>Passenger Count</th>
                   <th>Departure Date</th>
+                  <th>Departure Time</th>
                   <th>Type of Trip</th>
                   <th>Status</th>
                   <th>Action</th>
@@ -341,19 +446,19 @@ function OfficeDriverRequests() {
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan="12" className="muted">
+                    <td colSpan="13" className="muted">
                       Loading...
                     </td>
                   </tr>
                 ) : error ? (
                   <tr>
-                    <td colSpan="12" className="error-text">
+                    <td colSpan="13" className="error-text">
                       {error}
                     </td>
                   </tr>
                 ) : bookings.length === 0 ? (
                   <tr>
-                    <td colSpan="12" className="muted">
+                    <td colSpan="13" className="muted">
                       No driver requests found.
                     </td>
                   </tr>
@@ -372,6 +477,7 @@ function OfficeDriverRequests() {
                         <td>{booking.destination || '-'}</td>
                         <td>{booking.passenger_count ?? '-'}</td>
                         <td>{formatDate(booking.departure_time)}</td>
+                        <td>{formatTime(booking.departure_time)}</td>
                         <td>{formatTripType(booking.trip_type)}</td>
                         <td>
                           <span className={`status-badge status-${statusValue}`}>{booking.status || 'pending'}</span>
@@ -458,19 +564,27 @@ function OfficeDriverRequests() {
                 </p>
 
                 {driversError ? <p className="error-text">{driversError}</p> : null}
+                {availabilityError ? <p className="error-text">{availabilityError}</p> : null}
+                {actionError ? <p className="error-text">{actionError}</p> : null}
 
                 <label className="inline-label">
                   <span>Driver</span>
                   <select
                     value={selectedDriverId}
                     onChange={(e) => setSelectedDriverId(e.target.value)}
-                    disabled={driversLoading || processing[assignTarget?.id]}
+                    disabled={driversLoading || availabilityLoading || processing[assignTarget?.id]}
                     required
                   >
                     <option value="" disabled>
-                      {driversLoading ? 'Loading drivers...' : 'Select driver...'}
+                      {driversLoading
+                        ? 'Loading drivers...'
+                        : availabilityLoading
+                          ? 'Checking availability...'
+                          : availableDrivers.length
+                            ? 'Select driver...'
+                            : 'No drivers available'}
                     </option>
-                    {drivers.map((driver) => (
+                    {availableDrivers.map((driver) => (
                       <option key={driver.uid} value={driver.uid}>
                         {driver.name ? `${driver.name} (${driver.email})` : driver.email}
                       </option>
@@ -483,7 +597,7 @@ function OfficeDriverRequests() {
                     type="button"
                     className="btn btn-primary"
                     onClick={handleAssign}
-                    disabled={driversLoading || !drivers.length || processing[assignTarget?.id]}
+                    disabled={driversLoading || availabilityLoading || !availableDrivers.length || processing[assignTarget?.id]}
                   >
                     Assign
                   </button>

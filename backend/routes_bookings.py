@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Literal, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -113,6 +113,40 @@ def ensure_role(uid: str, allowed: tuple[str, ...]):
     return role
 
 
+def get_departure_time_epoch_ms(value: Optional[datetime]) -> Optional[int]:
+    if not isinstance(value, datetime):
+        return None
+
+    dt = value
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return int(dt.timestamp() * 1000)
+
+
+def is_driver_busy(driver_id: str, departure_time: Optional[datetime], exclude_booking_id: Optional[str] = None) -> bool:
+    if not driver_id or not isinstance(departure_time, datetime):
+        return False
+
+    target_epoch = get_departure_time_epoch_ms(departure_time)
+    if target_epoch is None:
+        return False
+
+    query = db.collection("bookings").where("driver_id", "==", driver_id)
+    for doc in query.stream():
+        if exclude_booking_id and doc.id == exclude_booking_id:
+            continue
+
+        data = doc.to_dict() or {}
+        if data.get("status") not in ("approved", "in_progress"):
+            continue
+
+        other_epoch = get_departure_time_epoch_ms(data.get("departure_time"))
+        if other_epoch == target_epoch:
+            return True
+
+    return False
+
+
 @router.post("", response_model=BookingResponse)
 def create_booking(payload: BookingCreate, current_user=Depends(get_current_user)):
     uid = current_user["uid"]
@@ -177,6 +211,11 @@ def assign_driver(payload: BookingAssignCreate, current_user=Depends(get_current
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Selected user is not a driver")
 
     driver_name = driver_data.get("name") or driver_record.email
+    if is_driver_busy(driver_uid, payload.departure_time):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Driver is not available at this departure time",
+        )
 
     linked_user_id = None
     try:
@@ -247,6 +286,32 @@ def list_pending_bookings(current_user=Depends(get_current_user)):
     return [serialize_booking(doc) for doc in sorted_docs]
 
 
+@router.get("/unavailable-drivers", response_model=list[str])
+def list_unavailable_drivers(departure_time: datetime, current_user=Depends(get_current_user)):
+    uid = current_user["uid"]
+    ensure_role(uid, ("office_coordinator", "superadmin"))
+
+    target_epoch = get_departure_time_epoch_ms(departure_time)
+    if target_epoch is None:
+        return []
+
+    snapshots = []
+    for status_value in ("approved", "in_progress"):
+        snapshots.extend(list(db.collection("bookings").where("status", "==", status_value).stream()))
+
+    unavailable: set[str] = set()
+    for doc in snapshots:
+        data = doc.to_dict() or {}
+        driver_id = data.get("driver_id")
+        if not driver_id:
+            continue
+        other_epoch = get_departure_time_epoch_ms(data.get("departure_time"))
+        if other_epoch == target_epoch:
+            unavailable.add(driver_id)
+
+    return sorted(unavailable)
+
+
 @router.patch("/{booking_id}/status", response_model=BookingResponse)
 def update_booking_status(
     booking_id: str,
@@ -260,6 +325,21 @@ def update_booking_status(
     snapshot = doc_ref.get()
     if not snapshot.exists:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Booking not found")
+
+    if payload.status == "approved":
+        if not payload.driver_id:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="driver_id is required for approval")
+
+        data = snapshot.to_dict() or {}
+        departure_time = data.get("departure_time")
+        if not isinstance(departure_time, datetime):
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Booking departure time is invalid")
+
+        if is_driver_busy(payload.driver_id, departure_time, exclude_booking_id=booking_id):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Driver is not available at this departure time",
+            )
 
     updates = {
         "status": payload.status,
