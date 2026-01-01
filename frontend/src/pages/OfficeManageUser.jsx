@@ -60,7 +60,7 @@ function OfficeManageUser() {
 
   const handleNavigate = (item) => {
     if (item === 'Dashboard') navigate('/office/home')
-    if (item === 'Travel Request') navigate('/office/ticket-requests')
+    if (item === 'Travel Requests') navigate('/office/ticket-requests')
     if (item === 'Driver Requests') navigate('/office/driver-requests')
     if (item === 'Travel Status & History') navigate('/office/ticket-history')
     if (item === 'Driver History') navigate('/office/driver-history')
