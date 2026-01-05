@@ -404,9 +404,9 @@ function OfficeTicketHistory() {
 
         <section className="office-content">
           <header className="office-header">
-            <p className="eyebrow">Ticket History</p>
-            <h1>Travel Accommodation History</h1>
-            <p className="muted">All processed ticket requests (non-pending)</p>
+            <p className="eyebrow">Travel Status & History</p>
+            <h1>List of all  travel status & history</h1>
+            <p className="muted">All processed travel requests (non-pending)</p>
           </header>
 
           <div className="form-actions">

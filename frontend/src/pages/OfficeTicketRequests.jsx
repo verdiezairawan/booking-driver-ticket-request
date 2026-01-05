@@ -172,8 +172,8 @@ function OfficeTicketRequests() {
 
         <section className="office-content">
           <header className="office-header">
-            <p className="eyebrow">List of all Travel Accommodation requests</p>
-            <h1>Travel Accommodation Requests</h1>
+            <p className="eyebrow">Travel Accommodation Requests</p>
+            <h1>List of all travel accommodation requests</h1>
             <p className="muted">Manage ticket approvals and assignments</p>
           </header>
 

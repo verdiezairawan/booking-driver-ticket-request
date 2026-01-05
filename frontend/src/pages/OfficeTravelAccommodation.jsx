@@ -152,9 +152,9 @@ function OfficeTravelAccommodation() {
 
         <section className="office-content">
           <header className="office-header">
-            <p className="eyebrow">Travel Accommodation</p>
+            <p className="eyebrow">Travel Assign</p>
             <h1>Create Travel Accommodation</h1>
-            <p className="muted">Create a travel ticket request on behalf of a user (will appear in Travel Requests for approval).</p>
+            <p className="muted">Create a travel request on behalf of a user (will appear in Travel Requests for approval).</p>
           </header>
 
           <form className="ticket-form" onSubmit={handleSubmit}>
