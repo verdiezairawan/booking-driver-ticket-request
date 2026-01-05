@@ -9,7 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from firebase_admin import auth as firebase_auth
 
-from firebase_client import db
+from firebase_client import db, init_firebase_admin
 
 app = FastAPI()
 
@@ -24,6 +24,11 @@ app.add_middleware(
 )
 
 security = HTTPBearer()
+
+
+@app.on_event("startup")
+def startup_event():
+    init_firebase_admin()
 
 
 def get_current_user(
@@ -48,6 +53,11 @@ from routes_users_admin import router as users_router
 
 @app.get("/health")
 def health_check():
+    return {"status": "ok"}
+
+
+@app.get("/healthz")
+def healthz_check():
     return {"status": "ok"}
 
 

@@ -153,5 +153,6 @@ frontend/.env
 *.log
 firebase-admin-*.json
 backend/*firebase-adminsdk*.json
+backend/*adminsdk*.json
 backend/serviceAccount*.json
 firebase-adminsdk*.json
