@@ -1,3 +1,9 @@
+import os
+
+from dotenv import load_dotenv
+
+load_dotenv()
+
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
@@ -7,10 +13,7 @@ from firebase_client import db
 
 app = FastAPI()
 
-origins = [
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-]
+origins = [origin.strip() for origin in os.getenv("CORS_ORIGINS", "http://localhost:5173").split(",") if origin.strip()]
 
 app.add_middleware(
     CORSMiddleware,

@@ -118,7 +118,6 @@ dist
 
 # Firebase cache directory
 .firebase/
-
 # TernJS port file
 .tern-port
 
@@ -150,8 +149,9 @@ frontend/dist/
 # Env & secrets
 .env
 backend/.env
+frontend/.env
 *.log
 firebase-admin-*.json
-backend/bdtrex-development-firebase-adminsdk.json
+backend/*firebase-adminsdk*.json
 backend/serviceAccount*.json
 firebase-adminsdk*.json
