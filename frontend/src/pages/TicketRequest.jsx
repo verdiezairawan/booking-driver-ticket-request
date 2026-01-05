@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import MainLayout from '../components/MainLayout'
+import { API_BASE_URL } from '../config'
 
 const initialForm = {
   destination: '',
@@ -102,7 +103,7 @@ function TicketRequest() {
     }
 
     try {
-      const endpoint = editingTicketId ? `http://localhost:8000/tickets/${editingTicketId}` : 'http://localhost:8000/tickets'
+      const endpoint = editingTicketId ? `${API_BASE_URL}/tickets/${editingTicketId}` : `${API_BASE_URL}/tickets`
       const method = editingTicketId ? 'PATCH' : 'POST'
 
       const response = await fetch(endpoint, {

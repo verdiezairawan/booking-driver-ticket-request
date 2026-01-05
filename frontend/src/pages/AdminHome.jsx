@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import MainLayout from '../components/MainLayout'
 import useOfficeSidebar from '../hooks/useOfficeSidebar'
+import { API_BASE_URL } from '../config'
 
 const menuItems = [
   { label: 'Dashboard', icon: 'bi-speedometer2' },
@@ -43,7 +44,7 @@ function AdminHome() {
 
     const loadProfile = async () => {
       try {
-        const res = await fetch('http://localhost:8000/users/me', {
+        const res = await fetch(`${API_BASE_URL}/users/me`, {
           headers: { Authorization: `Bearer ${token}` },
         })
         if (res.ok) {
@@ -58,10 +59,10 @@ function AdminHome() {
     const loadStats = async () => {
       try {
         const [ticketRes, bookingRes] = await Promise.all([
-          fetch('http://localhost:8000/tickets/stats', {
+          fetch(`${API_BASE_URL}/tickets/stats`, {
             headers: { Authorization: `Bearer ${token}` },
           }),
-          fetch('http://localhost:8000/bookings/stats', {
+          fetch(`${API_BASE_URL}/bookings/stats`, {
             headers: { Authorization: `Bearer ${token}` },
           }),
         ])

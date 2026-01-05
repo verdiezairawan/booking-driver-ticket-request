@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import MainLayout from '../components/MainLayout'
+import { API_BASE_URL } from '../config'
 
 const initialForm = {
   pickup_location: '',
@@ -106,8 +107,8 @@ function BookingDriver() {
 
     try {
       const endpoint = editingBookingId
-        ? `http://localhost:8000/bookings/${editingBookingId}`
-        : 'http://localhost:8000/bookings'
+        ? `${API_BASE_URL}/bookings/${editingBookingId}`
+        : `${API_BASE_URL}/bookings`
       const method = editingBookingId ? 'PATCH' : 'POST'
 
       const response = await fetch(endpoint, {

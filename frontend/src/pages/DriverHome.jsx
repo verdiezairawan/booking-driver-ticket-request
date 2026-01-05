@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import MainLayout from '../components/MainLayout'
+import { API_BASE_URL } from '../config'
 
 const TABS = {
   active: 'active',
@@ -59,7 +60,7 @@ function DriverHome() {
       setLoading(true)
       setError('')
       try {
-        const res = await fetch('http://localhost:8000/bookings/assigned', {
+        const res = await fetch(`${API_BASE_URL}/bookings/assigned`, {
           headers: { Authorization: `Bearer ${token}` },
         })
         if (!res.ok) {
@@ -252,7 +253,7 @@ function DriverHome() {
     setActionError('')
 
     try {
-      const res = await fetch(`http://localhost:8000/bookings/${activeBooking.id}/start`, {
+      const res = await fetch(`${API_BASE_URL}/bookings/${activeBooking.id}/start`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -315,7 +316,7 @@ function DriverHome() {
         return
       }
 
-      const res = await fetch(`http://localhost:8000/bookings/${activeBooking.id}/complete`, {
+      const res = await fetch(`${API_BASE_URL}/bookings/${activeBooking.id}/complete`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',

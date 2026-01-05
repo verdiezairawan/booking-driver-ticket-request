@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import MainLayout from '../components/MainLayout'
 import useOfficeSidebar from '../hooks/useOfficeSidebar'
+import { API_BASE_URL } from '../config'
 
 const menuItems = [{ label: 'Manage User', icon: 'bi-people' }]
 
@@ -65,7 +66,7 @@ function AdminManageUser() {
     if (!token) return
 
     try {
-      const res = await fetch('http://localhost:8000/users/me', {
+      const res = await fetch(`${API_BASE_URL}/users/me`, {
         headers: { Authorization: `Bearer ${token}` },
       })
       if (!res.ok) return
@@ -86,7 +87,7 @@ function AdminManageUser() {
     setLoading(true)
     setError('')
     try {
-      const res = await fetch('http://localhost:8000/users', {
+      const res = await fetch(`${API_BASE_URL}/users`, {
         headers: { Authorization: `Bearer ${token}` },
       })
       if (!res.ok) {
@@ -192,7 +193,7 @@ function AdminManageUser() {
 
     try {
       const fileBase64 = await readFileAsBase64(importFile)
-      const res = await fetch('http://localhost:8000/users/import', {
+      const res = await fetch(`${API_BASE_URL}/users/import`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -248,7 +249,7 @@ function AdminManageUser() {
     setSuccessModal(null)
 
     try {
-      const res = await fetch('http://localhost:8000/users', {
+      const res = await fetch(`${API_BASE_URL}/users`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -291,7 +292,7 @@ function AdminManageUser() {
     setSuccessModal(null)
 
     try {
-      const res = await fetch(`http://localhost:8000/users/${selectedUser.uid}`, {
+      const res = await fetch(`${API_BASE_URL}/users/${selectedUser.uid}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -334,7 +335,7 @@ function AdminManageUser() {
     setActionSuccess('')
 
     try {
-      const res = await fetch(`http://localhost:8000/users/${user.uid}/deactivate`, {
+      const res = await fetch(`${API_BASE_URL}/users/${user.uid}/deactivate`, {
         method: 'PATCH',
         headers: { Authorization: `Bearer ${token}` },
       })
@@ -374,7 +375,7 @@ function AdminManageUser() {
     setSuccessModal(null)
 
     try {
-      const res = await fetch(`http://localhost:8000/users/${user.uid}`, {
+      const res = await fetch(`${API_BASE_URL}/users/${user.uid}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
       })

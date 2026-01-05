@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import MainLayout from '../components/MainLayout'
 import useOfficeSidebar from '../hooks/useOfficeSidebar'
+import { API_BASE_URL } from '../config'
 
 const menuItems = [
   { label: 'Dashboard', icon: 'bi-speedometer2' },
@@ -85,7 +86,7 @@ function OfficeManageUser() {
     setLoading(true)
     setError('')
     try {
-      const res = await fetch('http://localhost:8000/users', {
+      const res = await fetch(`${API_BASE_URL}/users`, {
         headers: { Authorization: `Bearer ${token}` },
       })
       if (!res.ok) {
@@ -190,7 +191,7 @@ function OfficeManageUser() {
 
     try {
       const fileBase64 = await readFileAsBase64(importFile)
-      const res = await fetch('http://localhost:8000/users/import', {
+      const res = await fetch(`${API_BASE_URL}/users/import`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -246,7 +247,7 @@ function OfficeManageUser() {
     setSuccessModal(null)
 
     try {
-      const res = await fetch('http://localhost:8000/users', {
+      const res = await fetch(`${API_BASE_URL}/users`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -294,7 +295,7 @@ function OfficeManageUser() {
         delete updatePayload.role
       }
 
-      const res = await fetch(`http://localhost:8000/users/${selectedUser.uid}`, {
+      const res = await fetch(`${API_BASE_URL}/users/${selectedUser.uid}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -337,7 +338,7 @@ function OfficeManageUser() {
     setActionSuccess('')
 
     try {
-      const res = await fetch(`http://localhost:8000/users/${user.uid}/deactivate`, {
+      const res = await fetch(`${API_BASE_URL}/users/${user.uid}/deactivate`, {
         method: 'PATCH',
         headers: { Authorization: `Bearer ${token}` },
       })

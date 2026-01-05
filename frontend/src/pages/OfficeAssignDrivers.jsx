@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import MainLayout from '../components/MainLayout'
 import useOfficeSidebar from '../hooks/useOfficeSidebar'
+import { API_BASE_URL } from '../config'
 
 const menuItems = [
   { label: 'Dashboard', icon: 'bi-speedometer2' },
@@ -53,7 +54,7 @@ function OfficeAssignDrivers() {
       setDriversError('')
 
       try {
-        const res = await fetch('http://localhost:8000/users', {
+        const res = await fetch(`${API_BASE_URL}/users`, {
           headers: { Authorization: `Bearer ${token}` },
         })
         if (!res.ok) {
@@ -144,7 +145,7 @@ function OfficeAssignDrivers() {
     }
 
     try {
-      const response = await fetch('http://localhost:8000/bookings/assign', {
+      const response = await fetch(`${API_BASE_URL}/bookings/assign`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

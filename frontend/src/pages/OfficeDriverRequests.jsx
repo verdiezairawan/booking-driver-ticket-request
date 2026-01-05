@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import MainLayout from '../components/MainLayout'
 import useOfficeSidebar from '../hooks/useOfficeSidebar'
+import { API_BASE_URL } from '../config'
 
 const menuItems = [
   { label: 'Dashboard', icon: 'bi-speedometer2' },
@@ -50,7 +51,7 @@ function OfficeDriverRequests() {
     if (!token) return
     const loadProfile = async () => {
       try {
-        const res = await fetch('http://localhost:8000/users/me', {
+        const res = await fetch(`${API_BASE_URL}/users/me`, {
           headers: { Authorization: `Bearer ${token}` },
         })
         if (res.ok) {
@@ -73,7 +74,7 @@ function OfficeDriverRequests() {
       setDriversError('')
 
       try {
-        const res = await fetch('http://localhost:8000/users', {
+        const res = await fetch(`${API_BASE_URL}/users`, {
           headers: { Authorization: `Bearer ${token}` },
         })
         if (!res.ok) {
@@ -115,7 +116,7 @@ function OfficeDriverRequests() {
       setLoading(true)
       setError('')
       try {
-        const res = await fetch('http://localhost:8000/bookings/pending', {
+        const res = await fetch(`${API_BASE_URL}/bookings/pending`, {
           headers: { Authorization: `Bearer ${token}` },
         })
         if (!res.ok) {
@@ -167,7 +168,7 @@ function OfficeDriverRequests() {
     setUnavailableDriverIds([])
 
     try {
-      const url = new URL('http://localhost:8000/bookings/unavailable-drivers')
+      const url = new URL(`${API_BASE_URL}/bookings/unavailable-drivers`)
       url.searchParams.set('departure_time', booking.departure_time)
 
       const res = await fetch(url.toString(), {
@@ -263,7 +264,7 @@ function OfficeDriverRequests() {
     setActionError('')
 
     try {
-      const res = await fetch(`http://localhost:8000/bookings/${assignTarget.id}/status`, {
+      const res = await fetch(`${API_BASE_URL}/bookings/${assignTarget.id}/status`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -311,7 +312,7 @@ function OfficeDriverRequests() {
     setActionError('')
 
     try {
-      const res = await fetch(`http://localhost:8000/bookings/${bookingId}/status`, {
+      const res = await fetch(`${API_BASE_URL}/bookings/${bookingId}/status`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',

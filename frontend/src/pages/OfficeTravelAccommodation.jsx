@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import MainLayout from '../components/MainLayout'
 import useOfficeSidebar from '../hooks/useOfficeSidebar'
+import { API_BASE_URL } from '../config'
 
 const menuItems = [
   { label: 'Dashboard', icon: 'bi-speedometer2' },
@@ -87,7 +88,7 @@ function OfficeTravelAccommodation() {
     }
 
     try {
-      const response = await fetch('http://localhost:8000/tickets/accommodation', {
+      const response = await fetch(`${API_BASE_URL}/tickets/accommodation`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import MainLayout from '../components/MainLayout'
 import useOfficeSidebar from '../hooks/useOfficeSidebar'
+import { API_BASE_URL } from '../config'
 
 const menuItems = [
   { label: 'Dashboard', icon: 'bi-speedometer2' },
@@ -46,7 +47,7 @@ function OfficeTicketRequests() {
       setLoading(true)
       setError('')
       try {
-        const res = await fetch('http://localhost:8000/tickets/pending', {
+        const res = await fetch(`${API_BASE_URL}/tickets/pending`, {
           headers: { Authorization: `Bearer ${token}` },
         })
         if (!res.ok) {
@@ -86,7 +87,7 @@ function OfficeTicketRequests() {
     setActionError('')
 
     try {
-      const res = await fetch(`http://localhost:8000/tickets/${ticketId}/status`, {
+      const res = await fetch(`${API_BASE_URL}/tickets/${ticketId}/status`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import MainLayout from '../components/MainLayout'
+import { API_BASE_URL } from '../config'
 
 function UserHome() {
   const navigate = useNavigate()
@@ -21,9 +22,7 @@ function UserHome() {
 
     const fetchProfile = async () => {
       try {
-        const response = await fetch('http://localhost:8000/users/me', {
-          headers: { Authorization: `Bearer ${token}` },
-        })
+        const response = await fetch(`${API_BASE_URL}/users/me`, { headers: { Authorization: `Bearer ${token}` } })
         if (response.ok) {
           const data = await response.json()
           setProfile({ name: data.name || data.email || '' })
@@ -38,8 +37,8 @@ function UserHome() {
     const fetchStats = async () => {
       try {
         const [ticketsRes, bookingsRes] = await Promise.all([
-          fetch('http://localhost:8000/tickets/my', { headers: { Authorization: `Bearer ${token}` } }),
-          fetch('http://localhost:8000/bookings/my', { headers: { Authorization: `Bearer ${token}` } }),
+          fetch(`${API_BASE_URL}/tickets/my`, { headers: { Authorization: `Bearer ${token}` } }),
+          fetch(`${API_BASE_URL}/bookings/my`, { headers: { Authorization: `Bearer ${token}` } }),
         ])
 
         let ticketPending = 0

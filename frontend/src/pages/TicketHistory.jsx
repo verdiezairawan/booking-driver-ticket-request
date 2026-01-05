@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import MainLayout from '../components/MainLayout'
+import { API_BASE_URL } from '../config'
 
 function TicketHistory() {
   const navigate = useNavigate()
@@ -139,7 +140,7 @@ function TicketHistory() {
       }
 
       try {
-        const response = await fetch('http://localhost:8000/tickets/my', {
+        const response = await fetch(`${API_BASE_URL}/tickets/my`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -190,7 +191,7 @@ function TicketHistory() {
     setActionError('')
 
     try {
-      const response = await fetch(`http://localhost:8000/tickets/${ticketId}/cancel`, {
+      const response = await fetch(`${API_BASE_URL}/tickets/${ticketId}/cancel`, {
         method: 'PATCH',
         headers: { Authorization: `Bearer ${token}` },
       })
