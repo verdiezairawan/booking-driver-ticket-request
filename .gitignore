@@ -152,3 +152,6 @@ frontend/dist/
 backend/.env
 *.log
 firebase-admin-*.json
+backend/bdtrex-development-firebase-adminsdk.json
+backend/serviceAccount*.json
+firebase-adminsdk*.json
