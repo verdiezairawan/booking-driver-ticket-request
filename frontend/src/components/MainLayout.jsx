@@ -1,16 +1,130 @@
-import { useEffect } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { signOut } from 'firebase/auth'
 import { auth } from '../firebase'
-import { APP_NAME } from '../config'
+import { API_BASE_URL, APP_NAME } from '../config'
 
 function MainLayout({ title, children }) {
   const navigate = useNavigate()
+  const [notificationsOpen, setNotificationsOpen] = useState(false)
+  const [notifications, setNotifications] = useState([])
+  const [notificationsLoading, setNotificationsLoading] = useState(false)
+  const [notificationsError, setNotificationsError] = useState('')
+  const notificationsContainerRef = useRef(null)
 
   useEffect(() => {
     const trimmedTitle = typeof title === 'string' ? title.trim() : ''
     document.title = trimmedTitle ? `${trimmedTitle} | ${APP_NAME}` : APP_NAME
   }, [title])
+
+  const unreadCount = useMemo(
+    () => notifications.reduce((count, item) => (item?.read ? count : count + 1), 0),
+    [notifications]
+  )
+
+  const formatTimestamp = (value) => {
+    if (!value) return ''
+    const dateValue = value?.seconds ? new Date(value.seconds * 1000) : new Date(value)
+    if (Number.isNaN(dateValue.getTime())) return ''
+    return dateValue.toLocaleString(undefined, {
+      year: 'numeric',
+      month: 'short',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+    })
+  }
+
+  const fetchNotifications = async () => {
+    const token = localStorage.getItem('authToken')
+    if (!token) return
+
+    setNotificationsLoading(true)
+    setNotificationsError('')
+    try {
+      const res = await fetch(`${API_BASE_URL}/notifications/my?limit=25`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (!res.ok) {
+        let detail = 'Failed to load notifications.'
+        try {
+          const data = await res.json()
+          if (data?.detail) detail = data.detail
+        } catch {
+          // ignore parse error
+        }
+        setNotificationsError(detail)
+        setNotifications([])
+        return
+      }
+      const data = await res.json()
+      setNotifications(Array.isArray(data) ? data : [])
+    } catch {
+      setNotificationsError('Network error. Please try again.')
+      setNotifications([])
+    } finally {
+      setNotificationsLoading(false)
+    }
+  }
+
+  const markAllNotificationsRead = async () => {
+    const token = localStorage.getItem('authToken')
+    if (!token) return
+    try {
+      const res = await fetch(`${API_BASE_URL}/notifications/mark-all-read`, {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (!res.ok) return
+      setNotifications((prev) => prev.map((item) => ({ ...item, read: true })))
+    } catch {
+      // ignore
+    }
+  }
+
+  useEffect(() => {
+    fetchNotifications()
+
+    const intervalId = window.setInterval(() => {
+      fetchNotifications()
+    }, 30000)
+
+    const handleRefresh = () => {
+      fetchNotifications()
+    }
+
+    window.addEventListener('notifications:refresh', handleRefresh)
+
+    return () => {
+      window.clearInterval(intervalId)
+      window.removeEventListener('notifications:refresh', handleRefresh)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  useEffect(() => {
+    if (!notificationsOpen) return
+
+    const handlePointerDown = (event) => {
+      const container = notificationsContainerRef.current
+      if (!container) return
+      if (container.contains(event.target)) return
+      setNotificationsOpen(false)
+    }
+
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        setNotificationsOpen(false)
+      }
+    }
+
+    document.addEventListener('pointerdown', handlePointerDown)
+    document.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDown)
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [notificationsOpen])
 
   const handleLogout = async () => {
     localStorage.removeItem('authToken')
@@ -30,9 +144,57 @@ function MainLayout({ title, children }) {
         <div className="navbar__brand">
           <span className="navbar__title">{APP_NAME}</span>
         </div>
-        <button type="button" className="logout-button" onClick={handleLogout}>
-          Logout
-        </button>
+        <div className="navbar__actions">
+          <div className="navbar-notifications" ref={notificationsContainerRef}>
+            <button
+              type="button"
+              className="navbar-icon-button"
+              aria-label={unreadCount ? `Notifications (${unreadCount} new)` : 'Notifications'}
+              title={unreadCount ? `Notifications (${unreadCount} new)` : 'Notifications'}
+              onClick={async () => {
+                const nextOpen = !notificationsOpen
+                setNotificationsOpen(nextOpen)
+                if (!nextOpen) return
+                await markAllNotificationsRead()
+                await fetchNotifications()
+              }}
+            >
+              <i className="bi bi-bell" aria-hidden="true" />
+              {unreadCount ? <span className="navbar-notification-dot" aria-hidden="true" /> : null}
+            </button>
+
+            {notificationsOpen ? (
+              <div className="notifications-dropdown" role="menu" aria-label="Notifications">
+                <div className="notifications-dropdown__header">
+                  <span>Notifications</span>
+                  <button type="button" className="notifications-refresh" onClick={fetchNotifications} disabled={notificationsLoading}>
+                    {notificationsLoading ? 'Loading...' : 'Refresh'}
+                  </button>
+                </div>
+
+                {notificationsError ? <p className="error-text">{notificationsError}</p> : null}
+
+                <div className="notifications-dropdown__body">
+                  {!notificationsLoading && !notificationsError && notifications.length === 0 ? (
+                    <p className="muted" style={{ margin: 0 }}>
+                      No notifications yet.
+                    </p>
+                  ) : (
+                    notifications.map((item) => (
+                      <div key={item.id} className={`notification-item ${item.read ? 'is-read' : 'is-unread'}`}>
+                        <p className="notification-item__message">{item.message}</p>
+                        {item.created_at ? <p className="notification-item__meta">{formatTimestamp(item.created_at)}</p> : null}
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            ) : null}
+          </div>
+          <button type="button" className="logout-button" onClick={handleLogout}>
+            Logout
+          </button>
+        </div>
       </header>
 
       <main className="layout__content">

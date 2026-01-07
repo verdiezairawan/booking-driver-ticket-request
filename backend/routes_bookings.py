@@ -8,6 +8,7 @@ from pydantic import BaseModel, Field
 
 from firebase_client import db
 from main import get_current_user
+from notifications_service import create_user_notification, notify_roles
 
 router = APIRouter(prefix="/bookings", tags=["bookings"])
 
@@ -187,6 +188,27 @@ def create_booking(payload: BookingCreate, current_user=Depends(get_current_user
     if requester_nik:
         data["requester_nik"] = requester_nik
     doc_ref.set(data)
+
+    create_user_notification(
+        uid,
+        "Your driver booking request was submitted successfully. Status is pending and waiting for office coordinator approval.",
+        event="submitted",
+        entity_type="booking",
+        entity_id=doc_ref.id,
+        status="pending",
+        actor_id=uid,
+    )
+
+    notify_roles(
+        ("office_coordinator", "superadmin"),
+        "New driver booking request submitted. Status is pending and awaiting review.",
+        event="incoming_request",
+        entity_type="booking",
+        entity_id=doc_ref.id,
+        status="pending",
+        actor_id=uid,
+    )
+
     snapshot = doc_ref.get()
     return serialize_booking(snapshot)
 
@@ -247,6 +269,28 @@ def assign_driver(payload: BookingAssignCreate, current_user=Depends(get_current
     doc_ref.set(data)
     snapshot = doc_ref.get()
     booking = serialize_booking(snapshot)
+
+    if linked_user_id:
+        create_user_notification(
+            linked_user_id,
+            "A driver booking has been created for you and has been approved.",
+            event="created_by_office",
+            entity_type="booking",
+            entity_id=doc_ref.id,
+            status="approved",
+            actor_id=uid,
+        )
+
+    create_user_notification(
+        driver_uid,
+        "You have been assigned a new driver task. Please check Driver Tasks for details.",
+        event="assigned",
+        entity_type="booking",
+        entity_id=doc_ref.id,
+        status="approved",
+        actor_id=uid,
+    )
+
     return BookingOfficeHistoryResponse(**booking.model_dump(), driver_name=driver_name)
 
 
@@ -326,6 +370,8 @@ def update_booking_status(
     if not snapshot.exists:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Booking not found")
 
+    booking_data = snapshot.to_dict() or {}
+
     if payload.status == "approved":
         if not payload.driver_id:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="driver_id is required for approval")
@@ -349,6 +395,37 @@ def update_booking_status(
         updates["driver_id"] = payload.driver_id
 
     doc_ref.update(updates)
+
+    user_id = booking_data.get("user_id")
+    if user_id:
+        if payload.status == "approved":
+            message = "Your driver booking request has been approved."
+        elif payload.status == "rejected":
+            message = "Your driver booking request has been rejected."
+        else:
+            message = f"Your driver booking request status has been updated to {payload.status}."
+
+        create_user_notification(
+            user_id,
+            message,
+            event="status_updated",
+            entity_type="booking",
+            entity_id=booking_id,
+            status=payload.status,
+            actor_id=uid,
+        )
+
+    if payload.status == "approved" and payload.driver_id:
+        create_user_notification(
+            payload.driver_id,
+            "You have been assigned a new driver task. Please check Driver Tasks for details.",
+            event="assigned",
+            entity_type="booking",
+            entity_id=booking_id,
+            status="approved",
+            actor_id=uid,
+        )
+
     updated_snapshot = doc_ref.get()
     return serialize_booking(updated_snapshot)
 
@@ -379,6 +456,16 @@ def update_booking(booking_id: str, payload: BookingCreate, current_user=Depends
             "passenger_count": payload.passenger_count,
             "updated_at": firestore.SERVER_TIMESTAMP,
         }
+    )
+
+    create_user_notification(
+        uid,
+        "Your driver booking request was updated successfully. Status is pending and waiting for office coordinator approval.",
+        event="updated",
+        entity_type="booking",
+        entity_id=booking_id,
+        status="pending",
+        actor_id=uid,
     )
 
     updated_snapshot = doc_ref.get()
@@ -425,6 +512,24 @@ def cancel_booking(booking_id: str, current_user=Depends(get_current_user)):
             "updated_at": firestore.SERVER_TIMESTAMP,
         }
     )
+
+    target_user_id = data.get("user_id")
+    if role == "user":
+        message = "Your driver booking request has been cancelled."
+        target_user_id = uid
+    else:
+        message = "Your driver booking has been cancelled by the office coordinator."
+
+    if target_user_id:
+        create_user_notification(
+            target_user_id,
+            message,
+            event="cancelled",
+            entity_type="booking",
+            entity_id=booking_id,
+            status="cancelled",
+            actor_id=uid,
+        )
 
     updated_snapshot = doc_ref.get()
     return serialize_booking(updated_snapshot)

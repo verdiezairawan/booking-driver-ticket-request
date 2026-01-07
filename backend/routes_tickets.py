@@ -8,6 +8,7 @@ from pydantic import BaseModel, Field
 
 from firebase_client import db
 from main import get_current_user
+from notifications_service import create_user_notification, notify_roles
 
 router = APIRouter(prefix="/tickets", tags=["tickets"])
 
@@ -192,6 +193,27 @@ def create_ticket(payload: TicketUserCreate, current_user=Depends(get_current_us
 
     doc_ref = db.collection("tickets").document()
     doc_ref.set(data)
+
+    create_user_notification(
+        uid,
+        "Your travel request was submitted successfully. Status is pending and waiting for office coordinator approval.",
+        event="submitted",
+        entity_type="ticket",
+        entity_id=doc_ref.id,
+        status="pending",
+        actor_id=uid,
+    )
+
+    notify_roles(
+        ("office_coordinator", "superadmin"),
+        "New travel request submitted. Status is pending and awaiting review.",
+        event="incoming_request",
+        entity_type="ticket",
+        entity_id=doc_ref.id,
+        status="pending",
+        actor_id=uid,
+    )
+
     snapshot = doc_ref.get()
     return serialize_ticket(snapshot)
 
@@ -224,6 +246,18 @@ def create_travel_accommodation(payload: TicketCreate, current_user=Depends(get_
 
     doc_ref = db.collection("tickets").document()
     doc_ref.set(data)
+
+    if linked_user_id:
+        create_user_notification(
+            linked_user_id,
+            "A travel request has been created for you by the office coordinator. Status is pending and waiting for approval.",
+            event="created_by_office",
+            entity_type="ticket",
+            entity_id=doc_ref.id,
+            status="pending",
+            actor_id=uid,
+        )
+
     snapshot = doc_ref.get()
     return serialize_ticket(snapshot)
 
@@ -238,6 +272,8 @@ def update_ticket_status(ticket_id: str, payload: TicketStatusUpdate, current_us
     if not snapshot.exists:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Ticket not found")
 
+    ticket_data = snapshot.to_dict() or {}
+
     doc_ref.update(
         {
             "status": payload.status,
@@ -245,6 +281,23 @@ def update_ticket_status(ticket_id: str, payload: TicketStatusUpdate, current_us
             "updated_at": firestore.SERVER_TIMESTAMP,
         }
     )
+
+    user_id = ticket_data.get("user_id")
+    if user_id:
+        if payload.status == "approved":
+            message = "Your travel request has been approved."
+        else:
+            message = "Your travel request has been rejected."
+
+        create_user_notification(
+            user_id,
+            message,
+            event="status_updated",
+            entity_type="ticket",
+            entity_id=ticket_id,
+            status=payload.status,
+            actor_id=uid,
+        )
 
     updated_snapshot = doc_ref.get()
     return serialize_ticket(updated_snapshot)
@@ -278,6 +331,17 @@ def update_ticket(ticket_id: str, payload: TicketUserCreate, current_user=Depend
     }
 
     doc_ref.update(update_data)
+
+    create_user_notification(
+        uid,
+        "Your travel request was updated successfully. Status is pending and waiting for office coordinator approval.",
+        event="updated",
+        entity_type="ticket",
+        entity_id=ticket_id,
+        status="pending",
+        actor_id=uid,
+    )
+
     updated_snapshot = doc_ref.get()
     return serialize_ticket(updated_snapshot)
 
@@ -305,6 +369,16 @@ def cancel_ticket(ticket_id: str, current_user=Depends(get_current_user)):
             "cancelled_by": uid,
             "updated_at": firestore.SERVER_TIMESTAMP,
         }
+    )
+
+    create_user_notification(
+        uid,
+        "Your travel request has been cancelled.",
+        event="cancelled",
+        entity_type="ticket",
+        entity_id=ticket_id,
+        status="cancelled",
+        actor_id=uid,
     )
 
     updated_snapshot = doc_ref.get()

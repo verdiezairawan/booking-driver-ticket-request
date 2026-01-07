@@ -195,6 +195,7 @@ function BookingHistory() {
 
       const updated = await response.json()
       setBookings((prev) => prev.map((b) => (b.id === bookingId ? updated : b)))
+      window.dispatchEvent(new Event('notifications:refresh'))
     } catch (err) {
       setActionError('Network error. Please try again.')
     } finally {

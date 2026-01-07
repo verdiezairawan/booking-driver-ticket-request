@@ -210,6 +210,7 @@ function TicketHistory() {
 
       const updated = await response.json()
       setTickets((prev) => prev.map((t) => (t.id === ticketId ? updated : t)))
+      window.dispatchEvent(new Event('notifications:refresh'))
     } catch (err) {
       setActionError('Network error. Please try again.')
     } finally {

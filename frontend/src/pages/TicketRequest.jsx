@@ -130,6 +130,7 @@ function TicketRequest() {
         if (!editingTicketId) {
           setForm(initialForm)
         }
+        window.dispatchEvent(new Event('notifications:refresh'))
         setShowSuccessModal(true)
       }
     } catch (error) {

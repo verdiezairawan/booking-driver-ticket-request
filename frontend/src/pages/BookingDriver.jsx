@@ -135,6 +135,7 @@ function BookingDriver() {
         if (!editingBookingId) {
           setForm(initialForm)
         }
+        window.dispatchEvent(new Event('notifications:refresh'))
         setShowSuccessModal(true)
       }
     } catch (error) {

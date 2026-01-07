@@ -47,6 +47,7 @@ def get_current_user(
 
 
 from routes_bookings import router as bookings_router
+from routes_notifications import router as notifications_router
 from routes_tickets import router as tickets_router
 from routes_users_admin import router as users_router
 
@@ -78,5 +79,6 @@ def get_me(current_user=Depends(get_current_user)):
 
 
 app.include_router(bookings_router)
+app.include_router(notifications_router)
 app.include_router(tickets_router)
 app.include_router(users_router)
