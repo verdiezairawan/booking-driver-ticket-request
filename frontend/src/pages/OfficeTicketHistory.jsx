@@ -371,7 +371,7 @@ function OfficeTicketHistory() {
   }
 
   return (
-    <MainLayout title="">
+    <MainLayout title="Travel Status & History">
       <div className={`office-dashboard fixed-sidebar ${isSidebarCollapsed ? 'is-collapsed' : ''}`}>
         <aside className="office-sidebar visible">
           <div className="sidebar-header">

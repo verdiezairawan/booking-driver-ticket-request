@@ -1,8 +1,8 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { signInWithEmailAndPassword } from 'firebase/auth'
 import { auth } from '../firebase'
-import { API_BASE_URL } from '../config'
+import { API_BASE_URL, APP_NAME } from '../config'
 
 const roleRouteMap = {
   user: '/user/home',
@@ -11,14 +11,21 @@ const roleRouteMap = {
   superadmin: '/admin/home',
 }
 
+const LOGO_SOURCES = ['/app-logo.png', '/app-logo.jpg', '/app-logo.jpeg']
+
 function Login() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [logoIndex, setLogoIndex] = useState(0)
 
   const navigate = useNavigate()
+
+  useEffect(() => {
+    document.title = `Login | ${APP_NAME}`
+  }, [])
 
   const handleSubmit = async (event) => {
     event.preventDefault()
@@ -68,7 +75,16 @@ function Login() {
       <div className="login-wrapper">
         <div className="login-logo">
           <div className="login-logo__circle">
-            <span>APP LOGO</span>
+            {LOGO_SOURCES[logoIndex] ? (
+              <img
+                className="login-logo__image"
+                src={LOGO_SOURCES[logoIndex]}
+                alt={APP_NAME}
+                onError={() => setLogoIndex((prev) => prev + 1)}
+              />
+            ) : (
+              <span className="login-logo__fallback">APP LOGO</span>
+            )}
           </div>
         </div>
 

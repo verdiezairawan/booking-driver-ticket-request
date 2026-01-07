@@ -86,7 +86,7 @@ function OfficeHome() {
   }
 
   return (
-    <MainLayout title="">
+    <MainLayout title="Office Dashboard">
       <div className={`office-dashboard fixed-sidebar ${isSidebarCollapsed ? 'is-collapsed' : ''}`}>
         <aside className="office-sidebar visible">
           <div className="sidebar-header">

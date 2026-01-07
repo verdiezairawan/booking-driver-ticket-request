@@ -532,7 +532,7 @@ function DriverHome() {
       : 'this date'
 
   return (
-    <MainLayout title="">
+    <MainLayout title="Driver Tasks">
       <div className="driver-page">
         <header className="driver-header">
           <div>

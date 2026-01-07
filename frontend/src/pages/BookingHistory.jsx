@@ -250,7 +250,7 @@ function BookingHistory() {
   }
 
   return (
-    <MainLayout title="Booking Driver">
+    <MainLayout title="Booking Driver History">
       <div className="ticket-history">
         <header className="history-header">
           <button className="back-link" type="button" onClick={() => navigate(-1)}>

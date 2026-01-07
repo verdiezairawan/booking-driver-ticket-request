@@ -1,9 +1,16 @@
+import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { signOut } from 'firebase/auth'
 import { auth } from '../firebase'
+import { APP_NAME } from '../config'
 
 function MainLayout({ title, children }) {
   const navigate = useNavigate()
+
+  useEffect(() => {
+    const trimmedTitle = typeof title === 'string' ? title.trim() : ''
+    document.title = trimmedTitle ? `${trimmedTitle} | ${APP_NAME}` : APP_NAME
+  }, [title])
 
   const handleLogout = async () => {
     localStorage.removeItem('authToken')
@@ -21,7 +28,7 @@ function MainLayout({ title, children }) {
     <div className="layout">
       <header className="navbar">
         <div className="navbar__brand">
-          <span className="navbar__title">App Name</span>
+          <span className="navbar__title">{APP_NAME}</span>
         </div>
         <button type="button" className="logout-button" onClick={handleLogout}>
           Logout

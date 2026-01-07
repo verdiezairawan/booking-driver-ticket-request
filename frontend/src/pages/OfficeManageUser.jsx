@@ -365,7 +365,7 @@ function OfficeManageUser() {
   }
 
   return (
-    <MainLayout title="">
+    <MainLayout title="Manage Users">
       <div className={`office-dashboard fixed-sidebar ${isSidebarCollapsed ? 'is-collapsed' : ''}`}>
         <aside className="office-sidebar visible">
           <div className="sidebar-header">
