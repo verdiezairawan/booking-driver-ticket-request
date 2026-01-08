@@ -39,6 +39,7 @@ function AdminManageUser() {
   const [importLoading, setImportLoading] = useState(false)
   const [importError, setImportError] = useState('')
   const [importResult, setImportResult] = useState(null)
+  const [importUpdateExisting, setImportUpdateExisting] = useState(true)
 
   const [selectedUser, setSelectedUser] = useState(null)
   const [editForm, setEditForm] = useState(null)
@@ -46,6 +47,11 @@ function AdminManageUser() {
   const [editError, setEditError] = useState('')
 
   const [successModal, setSuccessModal] = useState(null)
+
+  const [passwordModalUser, setPasswordModalUser] = useState(null)
+  const [passwordForm, setPasswordForm] = useState({ password: '', confirm: '' })
+  const [passwordLoading, setPasswordLoading] = useState(false)
+  const [passwordError, setPasswordError] = useState('')
 
   const pageSize = 10
   const totalPages = Math.max(1, Math.ceil(users.length / pageSize))
@@ -132,6 +138,7 @@ function AdminManageUser() {
     setImportLoading(false)
     setImportError('')
     setImportResult(null)
+    setImportUpdateExisting(true)
   }
 
   const closeImportModal = () => {
@@ -202,6 +209,7 @@ function AdminManageUser() {
         body: JSON.stringify({
           filename: importFile.name,
           file_base64: fileBase64,
+          update_existing: importUpdateExisting,
         }),
       })
 
@@ -358,6 +366,75 @@ function AdminManageUser() {
       setActionError('Network error. Please try again.')
     } finally {
       setActionLoadingId('')
+    }
+  }
+
+  const openPasswordModal = (user) => {
+    setPasswordModalUser(user)
+    setPasswordForm({ password: '', confirm: '' })
+    setPasswordError('')
+    setActionSuccess('')
+    setActionError('')
+  }
+
+  const closePasswordModal = () => {
+    if (passwordLoading) return
+    setPasswordModalUser(null)
+    setPasswordForm({ password: '', confirm: '' })
+    setPasswordError('')
+  }
+
+  const handlePasswordChange = (field) => (event) => {
+    const value = event.target.value
+    setPasswordForm((prev) => ({ ...prev, [field]: value }))
+  }
+
+  const handleResetPassword = async (event) => {
+    event.preventDefault()
+    if (!token || !passwordModalUser?.uid) return
+
+    setPasswordError('')
+
+    const nextPassword = passwordForm.password
+    if (nextPassword.length < 6) {
+      setPasswordError('Password must be at least 6 characters.')
+      return
+    }
+    if (nextPassword !== passwordForm.confirm) {
+      setPasswordError('Passwords do not match.')
+      return
+    }
+
+    setPasswordLoading(true)
+    try {
+      const res = await fetch(`${API_BASE_URL}/users/${passwordModalUser.uid}/password`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ password: nextPassword }),
+      })
+
+      if (!res.ok) {
+        let detail = 'Failed to reset password.'
+        try {
+          const data = await res.json()
+          if (data?.detail) detail = data.detail
+        } catch {
+          // ignore parse error
+        }
+        setPasswordError(detail)
+        return
+      }
+
+      setActionSuccess('Password was reset successfully.')
+      closePasswordModal()
+      await loadUsers()
+    } catch {
+      setPasswordError('Network error. Please try again.')
+    } finally {
+      setPasswordLoading(false)
     }
   }
 
@@ -536,19 +613,19 @@ function AdminManageUser() {
           {actionError ? <p className="error-text">{actionError}</p> : null}
 
           {selectedUser && editForm ? (
-            <form className="office-form" onSubmit={handleUpdate}>
-              <section className="office-form__section">
-                <div className="form-section-title">
-                  <span className="form-section-icon" aria-hidden="true">
+            <form className="ticket-form" onSubmit={handleUpdate}>
+              <section className="field-group">
+                <div className="field-heading">
+                  <div className="heading-icon" aria-hidden="true">
                     <i className="bi bi-pencil-square" />
-                  </span>
+                  </div>
                   <div>
                     <h2>Edit User</h2>
                     <p className="muted">Update user profile</p>
                   </div>
                 </div>
 
-                <div className="form-grid">
+                <div className="field-grid">
                   <label className="inline-label">
                     <span>User Name</span>
                     <input placeholder="User Name" value={editForm.name} onChange={handleEditChange('name')} required />
@@ -659,6 +736,15 @@ function AdminManageUser() {
                           >
                             Update
                           </button>
+                          <button
+                            type="button"
+                            className="btn btn-neutral"
+                            disabled={actionLoadingId === user.uid || user.disabled || user.uid === currentUid}
+                            onClick={() => openPasswordModal(user)}
+                            title={user.uid === currentUid ? 'You cannot reset your own password here.' : 'Reset password'}
+                          >
+                            Reset Password
+                          </button>
                           {!user.disabled ? (
                             <button
                               type="button"
@@ -762,6 +848,85 @@ function AdminManageUser() {
             </div>
           ) : null}
 
+          {passwordModalUser ? (
+            <div
+              className="modal-overlay"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="reset-password-title"
+              onClick={() => {
+                if (!passwordLoading) closePasswordModal()
+              }}
+            >
+              <div
+                className="modal"
+                onClick={(event) => {
+                  event.stopPropagation()
+                }}
+              >
+                <div className="modal-header">
+                  <h2 id="reset-password-title">Reset Password</h2>
+                  <button
+                    type="button"
+                    className="modal-close"
+                    onClick={closePasswordModal}
+                    disabled={passwordLoading}
+                    aria-label="Close"
+                  >
+                    &times;
+                  </button>
+                </div>
+
+                <p className="muted" style={{ marginTop: 0 }}>
+                  Set a new password for <strong>{passwordModalUser.email || passwordModalUser.uid}</strong>.
+                </p>
+
+                <form className="modal-form" onSubmit={handleResetPassword}>
+                  <label className="inline-label">
+                    <span>New password</span>
+                    <input
+                      type="password"
+                      value={passwordForm.password}
+                      onChange={handlePasswordChange('password')}
+                      disabled={passwordLoading}
+                      autoComplete="new-password"
+                      minLength={6}
+                      required
+                    />
+                  </label>
+                  <label className="inline-label">
+                    <span>Confirm password</span>
+                    <input
+                      type="password"
+                      value={passwordForm.confirm}
+                      onChange={handlePasswordChange('confirm')}
+                      disabled={passwordLoading}
+                      autoComplete="new-password"
+                      minLength={6}
+                      required
+                    />
+                  </label>
+
+                  {passwordError ? <p className="error-text">{passwordError}</p> : null}
+
+                  <div className="modal-actions">
+                    <button type="submit" className="btn btn-primary" disabled={passwordLoading}>
+                      {passwordLoading ? 'Saving...' : 'Save'}
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-outline-danger"
+                      onClick={closePasswordModal}
+                      disabled={passwordLoading}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          ) : null}
+
           {importModalOpen ? (
             <div
               className="modal-overlay"
@@ -792,7 +957,7 @@ function AdminManageUser() {
                 </div>
 
                 <p className="muted" style={{ marginTop: 0 }}>
-                  Upload an Excel (.xlsx) or CSV (.csv) file to create multiple users. Allowed roles: <code>user</code>,{' '}
+                  Upload an Excel (.xlsx) or CSV (.csv) file to create or update multiple users. Allowed roles: <code>user</code>,{' '}
                   <code>driver</code>, <code>office_coordinator</code>, <code>superadmin</code> (role is optional; default is{' '}
                   <code>user</code>).
                 </p>
@@ -800,6 +965,19 @@ function AdminManageUser() {
                 <label className="inline-label">
                   <span>File</span>
                   <input type="file" accept=".xlsx,.csv" onChange={handleImportFileChange} disabled={importLoading} />
+                </label>
+
+                <label className="inline-label">
+                  <span>Options</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                    <input
+                      type="checkbox"
+                      checked={importUpdateExisting}
+                      onChange={(event) => setImportUpdateExisting(event.target.checked)}
+                      disabled={importLoading}
+                    />
+                    <span>Update existing accounts (reset password)</span>
+                  </div>
                 </label>
 
                 <p className="muted" style={{ marginTop: 0 }}>
@@ -812,7 +990,8 @@ function AdminManageUser() {
                 {importResult ? (
                   <>
                     <p className="success-text" style={{ marginTop: 0 }}>
-                      Created: {importResult.created ?? 0} • Failed: {importResult.failed ?? 0}
+                      Created: {importResult.created ?? 0} | Updated: {importResult.updated ?? 0} | Failed:{' '}
+                      {importResult.failed ?? 0}
                     </p>
                     {Array.isArray(importResult.errors) && importResult.errors.length ? (
                       <div

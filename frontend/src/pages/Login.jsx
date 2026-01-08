@@ -11,7 +11,27 @@ const roleRouteMap = {
   superadmin: '/admin/home',
 }
 
-const LOGO_SOURCES = ['/app-logo.png', '/app-logo.jpg', '/app-logo.jpeg']
+const LOGO_SOURCES = ['/app-logo-blue.png', '/app-logo-black.png', '/app-logo-white.png', '/app-logo.png']
+
+const getLoginErrorMessage = (err) => {
+  const code = err?.code
+  if (code === 'auth/invalid-credential') {
+    return 'Invalid email or password. If this account was imported, please ask an administrator to reset the password.'
+  }
+  if (code === 'auth/user-disabled') {
+    return 'Your account has been disabled. Please contact an administrator.'
+  }
+  if (code === 'auth/too-many-requests') {
+    return 'Too many login attempts. Please try again later.'
+  }
+  if (code === 'auth/network-request-failed') {
+    return 'Network error. Please try again.'
+  }
+  if (err?.message) {
+    return err.message
+  }
+  return 'Login failed. Please check your email and password.'
+}
 
 function Login() {
   const [email, setEmail] = useState('')
@@ -33,7 +53,8 @@ function Login() {
     setLoading(true)
 
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, email, password)
+      const normalizedEmail = email.trim().toLowerCase()
+      const userCredential = await signInWithEmailAndPassword(auth, normalizedEmail, password)
       const token = await userCredential.user.getIdToken(true)
 
       localStorage.setItem('authToken', token)
@@ -64,7 +85,7 @@ function Login() {
     } catch (err) {
       console.error('Login error', err)
       localStorage.removeItem('authToken')
-      setError(err?.message || 'Login failed. Please check your email and password.')
+      setError(getLoginErrorMessage(err))
     } finally {
       setLoading(false)
     }

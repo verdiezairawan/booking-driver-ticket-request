@@ -235,7 +235,7 @@
   overflow: hidden;
   display: grid;
   place-items: center;
-  padding: 22px;
+  padding: 12px;
 }
 
 .login-logo__image {
@@ -713,6 +713,37 @@
   gap: 6px;
   font-size: 13px;
   color: #475569;
+}
+
+.inline-label input:not([type='checkbox']):not([type='radio']):not([type='file']),
+.inline-label textarea,
+.inline-label select {
+  width: 100%;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid #cbd5e1;
+  font-size: 14px;
+}
+
+.inline-label input:not([type='checkbox']):not([type='radio']):not([type='file']):focus,
+.inline-label textarea:focus,
+.inline-label select:focus {
+  outline: 2px solid var(--brand-soft);
+  border-color: var(--brand-bold);
+}
+
+.inline-label select {
+  background-color: #ffffff;
+}
+
+.modal-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.modal-form .modal-actions {
+  margin-top: 6px;
 }
 
 .inline-date-time {
@@ -1862,7 +1893,7 @@
 
   .login-logo__circle {
     width: 260px;
-    padding: 16px;
+    padding: 10px;
   }
 
   .login-card {

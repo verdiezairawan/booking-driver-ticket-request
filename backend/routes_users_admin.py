@@ -39,6 +39,10 @@ class UserUpdate(BaseModel):
     email: Optional[str] = Field(default=None, min_length=3)
 
 
+class UserPasswordUpdate(BaseModel):
+    password: str = Field(..., min_length=6)
+
+
 class UserResponse(BaseModel):
     uid: str
     name: Optional[str] = None
@@ -53,6 +57,7 @@ class UserResponse(BaseModel):
 class UserImportRequest(BaseModel):
     filename: str = Field(..., min_length=1)
     file_base64: str = Field(..., min_length=1)
+    update_existing: bool = False
 
 
 class UserImportError(BaseModel):
@@ -63,6 +68,7 @@ class UserImportError(BaseModel):
 
 class UserImportResponse(BaseModel):
     created: int
+    updated: int = 0
     failed: int
     errors: list[UserImportError]
 
@@ -145,6 +151,11 @@ def normalize_cell_value(value: str) -> str:
             return text
 
     return text
+
+
+def normalize_email(value: str) -> str:
+    text = str(value or "").strip().lower()
+    return re.sub(r"\s+", "", text)
 
 
 def format_validation_error(exc: ValidationError) -> str:
@@ -391,12 +402,15 @@ def import_users(payload: UserImportRequest, current_user=Depends(get_current_us
     rows = parse_import_rows(filename, content)
 
     created = 0
+    updated = 0
     errors: list[UserImportError] = []
 
     for row_number, row_data in rows:
         normalized = {key: normalize_cell_value(value) for key, value in row_data.items()}
         normalized.setdefault("role", "user")
         normalized["role"] = (normalized.get("role") or "user").strip().lower()
+        if "email" in normalized:
+            normalized["email"] = normalize_email(normalized.get("email"))
 
         email = normalized.get("email") or None
 
@@ -422,8 +436,75 @@ def import_users(payload: UserImportRequest, current_user=Depends(get_current_us
             )
             continue
 
+        auth_uid: str | None = None
+        operation: str = "created"
+        profile_snapshot = None
+
         try:
             user_record = firebase_auth.create_user(email=user_payload.email, password=user_payload.password)
+            auth_uid = user_record.uid
+        except firebase_auth.EmailAlreadyExistsError:
+            if not payload.update_existing:
+                errors.append(
+                    UserImportError(
+                        row=row_number,
+                        email=email,
+                        message="Email already exists. Enable update_existing to reset password and update profile.",
+                    )
+                )
+                continue
+
+            try:
+                existing_record = firebase_auth.get_user_by_email(user_payload.email)
+            except Exception as exc:
+                errors.append(
+                    UserImportError(
+                        row=row_number,
+                        email=email,
+                        message=f"Failed to load existing user account: {exc}",
+                    )
+                )
+                continue
+
+            auth_uid = existing_record.uid
+            doc_ref = db.collection("users").document(auth_uid)
+            profile_snapshot = doc_ref.get()
+
+            if current_role == "office_coordinator":
+                if not profile_snapshot.exists:
+                    errors.append(
+                        UserImportError(
+                            row=row_number,
+                            email=email,
+                            message="Existing authentication account found but user profile is missing. Contact a superadmin to fix this account.",
+                        )
+                    )
+                    continue
+
+                existing_role = (profile_snapshot.to_dict() or {}).get("role")
+                if existing_role not in ("user", "driver"):
+                    errors.append(
+                        UserImportError(
+                            row=row_number,
+                            email=email,
+                            message="Office coordinator can only update roles: user, driver",
+                        )
+                    )
+                    continue
+
+            try:
+                firebase_auth.update_user(auth_uid, password=user_payload.password)
+            except Exception as exc:
+                errors.append(
+                    UserImportError(
+                        row=row_number,
+                        email=email,
+                        message=f"Failed to update existing user password: {exc}",
+                    )
+                )
+                continue
+
+            operation = "updated"
         except Exception as exc:
             errors.append(
                 UserImportError(
@@ -434,39 +515,100 @@ def import_users(payload: UserImportRequest, current_user=Depends(get_current_us
             )
             continue
 
-        doc_ref = db.collection("users").document(user_record.uid)
-        try:
-            doc_ref.set(
-                {
-                    "name": user_payload.name,
-                    "dept_job_position": user_payload.dept_job_position,
-                    "role": user_payload.role,
-                    "nik": user_payload.nik,
-                    "phone": user_payload.phone,
-                    "email": user_payload.email,
-                    "disabled": False,
-                    "created_at": firestore.SERVER_TIMESTAMP,
-                    "updated_at": firestore.SERVER_TIMESTAMP,
-                    "created_by": uid,
-                }
-            )
-        except Exception as exc:
-            try:
-                firebase_auth.delete_user(user_record.uid)
-            except Exception:
-                pass
+        if not auth_uid:
             errors.append(
                 UserImportError(
                     row=row_number,
                     email=email,
-                    message=f"Failed to create user profile: {exc}",
+                    message="Failed to determine authentication user id.",
                 )
             )
             continue
 
-        created += 1
+        doc_ref = db.collection("users").document(auth_uid)
+        try:
+            if operation == "created":
+                doc_ref.set(
+                    {
+                        "name": user_payload.name,
+                        "dept_job_position": user_payload.dept_job_position,
+                        "role": user_payload.role,
+                        "nik": user_payload.nik,
+                        "phone": user_payload.phone,
+                        "email": user_payload.email,
+                        "disabled": False,
+                        "created_at": firestore.SERVER_TIMESTAMP,
+                        "updated_at": firestore.SERVER_TIMESTAMP,
+                        "created_by": uid,
+                    }
+                )
+                created += 1
+            else:
+                if profile_snapshot is None:
+                    profile_snapshot = doc_ref.get()
 
-    return UserImportResponse(created=created, failed=len(errors), errors=errors)
+                if not profile_snapshot.exists:
+                    if current_role != "superadmin":
+                        raise HTTPException(
+                            status_code=status.HTTP_403_FORBIDDEN,
+                            detail="Forbidden",
+                        )
+
+                    doc_ref.set(
+                        {
+                            "name": user_payload.name,
+                            "dept_job_position": user_payload.dept_job_position,
+                            "role": user_payload.role,
+                            "nik": user_payload.nik,
+                            "phone": user_payload.phone,
+                            "email": user_payload.email,
+                            "disabled": False,
+                            "created_at": firestore.SERVER_TIMESTAMP,
+                            "updated_at": firestore.SERVER_TIMESTAMP,
+                            "created_by": uid,
+                        }
+                    )
+                else:
+                    doc_ref.set(
+                        {
+                            "name": user_payload.name,
+                            "dept_job_position": user_payload.dept_job_position,
+                            "role": user_payload.role,
+                            "nik": user_payload.nik,
+                            "phone": user_payload.phone,
+                            "email": user_payload.email,
+                            "updated_at": firestore.SERVER_TIMESTAMP,
+                            "updated_by": uid,
+                        },
+                        merge=True,
+                    )
+
+                updated += 1
+        except HTTPException as exc:
+            errors.append(
+                UserImportError(
+                    row=row_number,
+                    email=email,
+                    message=str(exc.detail),
+                )
+            )
+            continue
+        except Exception as exc:
+            if operation == "created":
+                try:
+                    firebase_auth.delete_user(auth_uid)
+                except Exception:
+                    pass
+            errors.append(
+                UserImportError(
+                    row=row_number,
+                    email=email,
+                    message=f"Failed to save user profile: {exc}",
+                )
+            )
+            continue
+
+    return UserImportResponse(created=created, updated=updated, failed=len(errors), errors=errors)
 
 
 @router.post("", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
@@ -544,6 +686,57 @@ def update_user(user_id: str, payload: UserUpdate, current_user=Depends(get_curr
     updates["updated_at"] = firestore.SERVER_TIMESTAMP
     updates["updated_by"] = uid
     doc_ref.update(updates)
+
+    updated_snapshot = doc_ref.get()
+    return serialize_user(updated_snapshot)
+
+
+@router.patch("/{user_id}/password", response_model=UserResponse)
+def reset_password(user_id: str, payload: UserPasswordUpdate, current_user=Depends(get_current_user)):
+    uid = current_user["uid"]
+    current_role = ensure_role(uid, ("office_coordinator", "superadmin"))
+
+    if user_id == uid:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cannot reset your own password")
+
+    doc_ref = db.collection("users").document(user_id)
+    snapshot = doc_ref.get()
+    if not snapshot.exists:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User profile not found")
+
+    target_data = snapshot.to_dict() or {}
+    target_role = target_data.get("role")
+    if target_role == "superadmin" and current_role != "superadmin":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
+    if current_role == "office_coordinator" and target_role not in ("user", "driver"):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
+
+    try:
+        firebase_auth.update_user(user_id, password=payload.password)
+    except firebase_auth.UserNotFoundError:
+        email = target_data.get("email")
+        if not email:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="User email is missing. Cannot create authentication account.",
+            )
+        try:
+            firebase_auth.create_user(uid=user_id, email=email, password=payload.password)
+        except Exception as exc:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Failed to create user authentication account.",
+            ) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Failed to reset user password") from exc
+
+    doc_ref.set(
+        {
+            "updated_at": firestore.SERVER_TIMESTAMP,
+            "updated_by": uid,
+        },
+        merge=True,
+    )
 
     updated_snapshot = doc_ref.get()
     return serialize_user(updated_snapshot)
