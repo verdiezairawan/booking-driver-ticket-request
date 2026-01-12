@@ -465,7 +465,7 @@ function OfficeDriverHistory() {
       'National ID',
       'Pickup Location',
       'Destination',
-      'Passenger Count',
+      'Total Passenger',
       'Day',
       'Departure Date',
       'Starting Time',
@@ -643,7 +643,7 @@ function OfficeDriverHistory() {
                   </th>
                   <th>
                     <button type="button" className="table-sort" onClick={() => toggleSort('passenger_count')}>
-                      Passenger Count {renderSortIcon('passenger_count')}
+                      Total Passenger {renderSortIcon('passenger_count')}
                     </button>
                   </th>
                   <th>

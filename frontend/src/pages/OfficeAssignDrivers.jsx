@@ -41,6 +41,11 @@ function OfficeAssignDrivers() {
   const [drivers, setDrivers] = useState([])
   const [driversLoading, setDriversLoading] = useState(false)
   const [driversError, setDriversError] = useState('')
+  const [availabilityLoading, setAvailabilityLoading] = useState(false)
+  const [availabilityError, setAvailabilityError] = useState('')
+  const [driverAvailabilityError, setDriverAvailabilityError] = useState('')
+  const [unavailableDriverIds, setUnavailableDriverIds] = useState(() => new Set())
+  const [availabilityChecked, setAvailabilityChecked] = useState(false)
 
   useEffect(() => {
     const token = localStorage.getItem('authToken')
@@ -84,6 +89,88 @@ function OfficeAssignDrivers() {
     loadDrivers()
   }, [])
 
+  useEffect(() => {
+    setAvailabilityError('')
+    setAvailabilityChecked(false)
+    setDriverAvailabilityError('')
+
+    if (!form.departure_date || !form.departure_time) {
+      setUnavailableDriverIds(new Set())
+      return
+    }
+
+    const departureDateTime = new Date(`${form.departure_date}T${form.departure_time}`)
+    if (Number.isNaN(departureDateTime.getTime())) {
+      setAvailabilityError('Invalid departure date or time format.')
+      setUnavailableDriverIds(new Set())
+      return
+    }
+
+    const token = localStorage.getItem('authToken')
+    if (!token) {
+      setAvailabilityError('Authentication token not found.')
+      setUnavailableDriverIds(new Set())
+      return
+    }
+
+    const controller = new AbortController()
+    const loadUnavailableDrivers = async () => {
+      setAvailabilityLoading(true)
+      setAvailabilityChecked(true)
+      setUnavailableDriverIds(new Set())
+
+      try {
+        const res = await fetch(
+          `${API_BASE_URL}/bookings/unavailable-drivers?departure_time=${encodeURIComponent(departureDateTime.toISOString())}`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+            signal: controller.signal,
+          }
+        )
+
+        if (!res.ok) {
+          let detail = 'Failed to check driver availability.'
+          try {
+            const data = await res.json()
+            if (data?.detail) detail = data.detail
+          } catch {
+            // ignore parse error
+          }
+          setAvailabilityError(detail)
+          setUnavailableDriverIds(new Set())
+          return
+        }
+
+        const data = await res.json()
+        const ids = Array.isArray(data) ? data.filter((id) => typeof id === 'string') : []
+        setUnavailableDriverIds(new Set(ids))
+      } catch (err) {
+        if (err?.name === 'AbortError') return
+        setAvailabilityError('Network error. Please try again.')
+        setUnavailableDriverIds(new Set())
+      } finally {
+        setAvailabilityLoading(false)
+      }
+    }
+
+    loadUnavailableDrivers()
+    return () => controller.abort()
+  }, [form.departure_date, form.departure_time])
+
+  useEffect(() => {
+    if (!form.driver_email) return
+    if (!form.departure_date || !form.departure_time) return
+    if (!unavailableDriverIds.size) return
+
+    const selected = drivers.find((driver) => driver.email === form.driver_email)
+    if (!selected) return
+
+    if (unavailableDriverIds.has(selected.uid)) {
+      setDriverAvailabilityError('Selected driver is not available at this departure time.')
+      setForm((prev) => ({ ...prev, driver_email: '' }))
+    }
+  }, [drivers, form.departure_date, form.departure_time, form.driver_email, unavailableDriverIds])
+
   const handleNavigate = (item) => {
     if (item === 'Dashboard') navigate('/office/home')
     if (item === 'Travel Requests') navigate('/office/ticket-requests')
@@ -97,6 +184,9 @@ function OfficeAssignDrivers() {
 
   const handleChange = (field) => (event) => {
     const value = field === 'passenger_count' ? event.target.value : event.target.value
+    if (field === 'driver_email') {
+      setDriverAvailabilityError('')
+    }
     setForm((prev) => ({
       ...prev,
       [field]: value,
@@ -224,7 +314,7 @@ function OfficeAssignDrivers() {
                   <i className="bi bi-person-badge" />
                 </div>
                 <div>
-                  <h2>Requester</h2>
+                  <h2>Requestor</h2>
                   <p className="muted">User details (can be a non-account user)</p>
                 </div>
               </div>
@@ -333,7 +423,7 @@ function OfficeAssignDrivers() {
                   <input type="time" value={form.departure_time} onChange={handleChange('departure_time')} required />
                 </label>
                 <label className="inline-label">
-                  <span>Passenger count</span>
+                  <span>Total Passenger</span>
                   <input
                     type="number"
                     min="1"
@@ -357,24 +447,62 @@ function OfficeAssignDrivers() {
               </div>
               <div className="field-grid">
                 {driversError ? <p className="error-text">{driversError}</p> : null}
+                {driverAvailabilityError ? <p className="error-text">{driverAvailabilityError}</p> : null}
                 <label className="inline-label">
                   <span>Driver</span>
                   <select
                     value={form.driver_email}
                     onChange={handleChange('driver_email')}
-                    disabled={driversLoading || loading || !drivers.length}
+                    disabled={driversLoading || loading || availabilityLoading || !drivers.length}
                     required
                   >
                     <option value="" disabled>
-                      {driversLoading ? 'Loading drivers...' : drivers.length ? 'Select driver...' : 'No drivers found'}
+                      {driversLoading
+                        ? 'Loading drivers...'
+                        : availabilityLoading
+                          ? 'Checking availability...'
+                          : drivers.length
+                            ? 'Select driver...'
+                            : 'No drivers found'}
                     </option>
-                    {drivers.map((driver) => (
-                      <option key={driver.uid} value={driver.email}>
-                        {driver.name ? `${driver.name} (${driver.email})` : driver.email}
-                      </option>
-                    ))}
+                    {drivers
+                      .slice()
+                      .sort((a, b) => {
+                        if (!form.departure_date || !form.departure_time || availabilityLoading || availabilityError) return 0
+                        const aUnavailable = unavailableDriverIds.has(a.uid)
+                        const bUnavailable = unavailableDriverIds.has(b.uid)
+                        if (aUnavailable === bUnavailable) return 0
+                        return aUnavailable ? 1 : -1
+                      })
+                      .map((driver) => {
+                        const isCheckingAvailability = form.departure_date && form.departure_time && availabilityChecked
+                        const isUnavailable = isCheckingAvailability && unavailableDriverIds.has(driver.uid)
+                        const label = driver.name ? `${driver.name} (${driver.email})` : driver.email
+                        return (
+                          <option key={driver.uid} value={driver.email} disabled={isUnavailable}>
+                            {isUnavailable ? `${label} — Unavailable` : label}
+                          </option>
+                        )
+                      })}
                   </select>
                 </label>
+                {!form.departure_date || !form.departure_time ? (
+                  <p className="muted" style={{ gridColumn: '1 / -1', margin: 0 }}>
+                    Set departure date and time to check driver availability.
+                  </p>
+                ) : availabilityLoading ? (
+                  <p className="muted" style={{ gridColumn: '1 / -1', margin: 0 }}>
+                    Checking availability...
+                  </p>
+                ) : availabilityError ? (
+                  <p className="error-text" style={{ gridColumn: '1 / -1', margin: 0 }}>
+                    {availabilityError}
+                  </p>
+                ) : availabilityChecked && drivers.length ? (
+                  <p className="muted" style={{ gridColumn: '1 / -1', margin: 0 }}>
+                    Availability: {Math.max(0, drivers.length - unavailableDriverIds.size)} available · {unavailableDriverIds.size} unavailable
+                  </p>
+                ) : null}
               </div>
             </section>
 
@@ -382,8 +510,8 @@ function OfficeAssignDrivers() {
             {errorMessage ? <p className="error-text">{errorMessage}</p> : null}
 
             <div className="form-actions">
-              <button type="submit" className="btn btn-primary" disabled={loading}>
-                {loading ? 'Submitting...' : 'Assign Driver'}
+              <button type="submit" className="btn btn-primary" disabled={loading || availabilityLoading}>
+                {loading ? 'Submitting...' : availabilityLoading ? 'Checking availability...' : 'Assign Driver'}
               </button>
               <button type="button" className="btn btn-neutral" onClick={() => navigate('/office/driver-history')}>
                 View History

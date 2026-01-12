@@ -7,6 +7,12 @@ const TABS = {
   completed: 'completed',
 }
 
+const STATUS_STEPS = [
+  { key: 'approved', label: 'Approved' },
+  { key: 'in_progress', label: 'In Progress' },
+  { key: 'completed', label: 'Completed' },
+]
+
 function DriverHome() {
   const [bookings, setBookings] = useState([])
   const [loading, setLoading] = useState(true)
@@ -371,6 +377,52 @@ function DriverHome() {
     return String(value).replace(/_/g, ' ')
   }
 
+  const renderStatusStepper = (value) => {
+    const statusValue = String(value || '').toLowerCase()
+    const activeIndex = STATUS_STEPS.findIndex((step) => step.key === statusValue)
+
+    if (activeIndex < 0) {
+      return <span className={`status-badge status-${statusValue}`}>{formatStatusText(statusValue)}</span>
+    }
+
+    const nodes = []
+    STATUS_STEPS.forEach((step, index) => {
+      const isDone = index < activeIndex
+      const isActive = index === activeIndex
+      const stateClass = isDone ? 'is-done' : isActive ? 'is-active' : 'is-upcoming'
+
+      nodes.push(
+        <div
+          key={`step-${step.key}`}
+          className={`status-stepper__step ${stateClass}`}
+          role="listitem"
+          aria-current={isActive ? 'step' : undefined}
+        >
+          <span className="status-stepper__dot" aria-hidden="true">
+            {isDone ? <i className="bi bi-check-lg" aria-hidden="true" /> : index + 1}
+          </span>
+          <span className="status-stepper__label">{step.label}</span>
+        </div>
+      )
+
+      if (index < STATUS_STEPS.length - 1) {
+        nodes.push(
+          <span
+            key={`connector-${step.key}`}
+            className={`status-stepper__connector ${index < activeIndex ? 'is-done' : ''}`}
+            aria-hidden="true"
+          />
+        )
+      }
+    })
+
+    return (
+      <div className="status-stepper" aria-label="Task status" role="list">
+        {nodes}
+      </div>
+    )
+  }
+
   function toDateKey(date) {
     if (!(date instanceof Date) || Number.isNaN(date.getTime())) return ''
     const year = String(date.getFullYear())
@@ -688,7 +740,7 @@ function DriverHome() {
                         </span>
                       </h2>
                       <div className="driver-subrow">
-                        <span className={`status-badge status-${booking.status}`}>{formatStatusText(booking.status)}</span>
+                        {renderStatusStepper(booking.status)}
                         <span className="muted">
                           Departure: <strong>{formatDeparture(booking.departure_time)}</strong>
                         </span>
@@ -698,7 +750,7 @@ function DriverHome() {
 
                   <div className="driver-meta">
                     <div className="driver-meta__item">
-                      <span className="driver-meta__label">Passengers</span>
+                      <span className="driver-meta__label">Total Passenger</span>
                       <span className="driver-meta__value">{booking.passenger_count ?? '-'}</span>
                     </div>
                     <div className="driver-meta__item">
@@ -706,7 +758,7 @@ function DriverHome() {
                       <span className="driver-meta__value">{formatTripType(booking.trip_type)}</span>
                     </div>
                     <div className="driver-meta__item">
-                      <span className="driver-meta__label">Requester</span>
+                      <span className="driver-meta__label">Requestor</span>
                       <span className="driver-meta__value">{booking.requester_name || '-'}</span>
                     </div>
                     <div className="driver-meta__item">

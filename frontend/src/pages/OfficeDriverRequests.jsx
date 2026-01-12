@@ -437,7 +437,7 @@ function OfficeDriverRequests() {
                   <th>National ID</th>
                   <th>Pickup Location</th>
                   <th>Destination</th>
-                  <th>Passenger Count</th>
+                  <th>Total Passenger</th>
                   <th>Departure Date</th>
                   <th>Departure Time</th>
                   <th>Type of Trip</th>
