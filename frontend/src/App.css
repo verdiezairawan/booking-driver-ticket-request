@@ -1272,6 +1272,12 @@
   font-weight: 700;
 }
 
+.simple-table .table-col-no,
+.office-table .table-col-no {
+  width: 56px;
+  text-align: center;
+}
+
 .status-badge {
   display: inline-block;
   padding: 6px 10px;

@@ -288,6 +288,7 @@ function OfficeTicketHistory() {
     const rangeLabel = activeRange.mode === 'range' && activeRange.start && activeRange.end ? `${activeRange.start}_to_${activeRange.end}` : 'all-time'
 
     const headers = [
+      'No',
       'Name',
       'User Dept/Job Position',
       'Phone',
@@ -308,7 +309,8 @@ function OfficeTicketHistory() {
       'Status',
     ]
 
-    const rows = sortedTickets.map((ticket) => [
+    const rows = sortedTickets.map((ticket, index) => [
+      index + 1,
       ticket.full_name || '',
       ticket.dept_job_position || '',
       ticket.phone_number || '',
@@ -412,7 +414,8 @@ function OfficeTicketHistory() {
 
           <div className="form-actions">
             <button type="button" className="btn btn-neutral" onClick={openRangeModal} disabled={loading}>
-              {hasLoaded ? 'Change Range' : 'Select Range'}
+              <i className="bi bi-calendar3" aria-hidden="true" />
+              {hasLoaded ? 'Change Date Range' : 'Date Range'}
             </button>
             <button
               type="button"
@@ -426,12 +429,13 @@ function OfficeTicketHistory() {
             </button>
           </div>
 
-          {hasLoaded ? <p className="muted">Range: {getActiveRangeLabel()}</p> : <p className="muted">Range: Not loaded</p>}
+          {hasLoaded ? <p className="muted">Date Range: {getActiveRangeLabel()}</p> : <p className="muted">Date Range: Not loaded</p>}
 
           <div className="office-table-wrapper">
             <table className="office-table">
               <thead>
                 <tr>
+                  <th className="table-col-no">No</th>
                   <th>
                     <button type="button" className="table-sort" onClick={() => toggleSort('full_name')}>
                       Name {renderSortIcon('full_name')}
@@ -527,31 +531,32 @@ function OfficeTicketHistory() {
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan="18" className="muted">
+                    <td colSpan="19" className="muted">
                       Loading...
                     </td>
                   </tr>
                 ) : error ? (
                   <tr>
-                    <td colSpan="18" className="error-text">
+                    <td colSpan="19" className="error-text">
                       {error}
                     </td>
                   </tr>
                 ) : !hasLoaded ? (
                   <tr>
-                    <td colSpan="18" className="muted">
+                    <td colSpan="19" className="muted">
                       Select a date range to load travel history.
                     </td>
                   </tr>
                 ) : tickets.length === 0 ? (
                   <tr>
-                    <td colSpan="18" className="muted">
+                    <td colSpan="19" className="muted">
                       No ticket history found.
                     </td>
                   </tr>
                 ) : (
-                  pagedTickets.map((ticket) => (
+                  pagedTickets.map((ticket, index) => (
                     <tr key={ticket.id}>
+                      <td className="table-col-no">{(currentPage - 1) * pageSize + index + 1}</td>
                       <td>{ticket.full_name || '-'}</td>
                       <td>{ticket.dept_job_position || '-'}</td>
                       <td>{ticket.phone_number || '-'}</td>

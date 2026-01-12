@@ -185,6 +185,7 @@ function OfficeTicketRequests() {
             <table className="office-table">
               <thead>
                 <tr>
+                  <th className="table-col-no">No</th>
                   <th>Name</th>
                   <th>User Dept/Job Position</th>
                   <th>Phone</th>
@@ -209,25 +210,26 @@ function OfficeTicketRequests() {
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan="19" className="muted">
+                    <td colSpan="20" className="muted">
                       Loading...
                     </td>
                   </tr>
                 ) : error ? (
                   <tr>
-                    <td colSpan="19" className="error-text">
+                    <td colSpan="20" className="error-text">
                       {error}
                     </td>
                   </tr>
                 ) : tickets.length === 0 ? (
                   <tr>
-                    <td colSpan="19" className="muted">
+                    <td colSpan="20" className="muted">
                       No ticket requests found.
                     </td>
                   </tr>
                 ) : (
-                  pagedTickets.map((ticket) => (
+                  pagedTickets.map((ticket, index) => (
                     <tr key={ticket.id}>
+                      <td className="table-col-no">{(currentPage - 1) * pageSize + index + 1}</td>
                       <td>{ticket.full_name || '-'}</td>
                       <td>{ticket.dept_job_position || '-'}</td>
                       <td>{ticket.phone_number || '-'}</td>

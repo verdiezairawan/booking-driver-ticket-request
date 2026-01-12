@@ -376,6 +376,121 @@ def parse_import_rows(filename: str, content: bytes) -> list[tuple[int, dict[str
     raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Unsupported file type. Use .xlsx or .csv")
 
 
+def xlsx_column_letter(index: int) -> str:
+    if index < 0:
+        raise ValueError("Column index must be non-negative")
+
+    letters: list[str] = []
+    idx = index
+    while idx >= 0:
+        idx, remainder = divmod(idx, 26)
+        letters.append(chr(ord("A") + remainder))
+        idx -= 1
+    return "".join(reversed(letters))
+
+
+def xml_escape_text(value: str) -> str:
+    text = str(value or "")
+    return (
+        text.replace("&", "&amp;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+        .replace('"', "&quot;")
+        .replace("'", "&apos;")
+    )
+
+
+def build_user_import_template_xlsx() -> bytes:
+    headers = ["name", "dept_job_position", "role", "nik", "phone", "email", "password"]
+    example_row = ["John Doe", "Finance", "user", "1234567890", "081234567890", "john@example.com", "password123"]
+
+    def make_row(row_number: int, values: list[str]) -> str:
+        cells: list[str] = []
+        for col_idx, value in enumerate(values):
+            cell_ref = f"{xlsx_column_letter(col_idx)}{row_number}"
+            cell_text = xml_escape_text(value)
+            cells.append(f'<c r="{cell_ref}" t="inlineStr"><is><t>{cell_text}</t></is></c>')
+        return f'<row r="{row_number}">{"".join(cells)}</row>'
+
+    last_col = xlsx_column_letter(len(headers) - 1)
+    dimension_ref = f"A1:{last_col}2"
+
+    sheet_xml = f"""<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"
+ xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+  <dimension ref="{dimension_ref}"/>
+  <sheetData>
+    {make_row(1, headers)}
+    {make_row(2, example_row)}
+  </sheetData>
+</worksheet>
+"""
+
+    content_types_xml = """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+  <Default Extension="xml" ContentType="application/xml"/>
+  <Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>
+  <Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>
+  <Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>
+</Types>
+"""
+
+    root_rels_xml = """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>
+</Relationships>
+"""
+
+    workbook_xml = """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"
+ xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+  <sheets>
+    <sheet name="Sheet1" sheetId="1" r:id="rId1"/>
+  </sheets>
+</workbook>
+"""
+
+    workbook_rels_xml = """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>
+  <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
+</Relationships>
+"""
+
+    styles_xml = """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+  <fonts count="1"><font><sz val="11"/><name val="Calibri"/></font></fonts>
+  <fills count="1"><fill><patternFill patternType="none"/></fill></fills>
+  <borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders>
+  <cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>
+  <cellXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/></cellXfs>
+  <cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>
+</styleSheet>
+"""
+
+    output = io.BytesIO()
+    with zipfile.ZipFile(output, mode="w", compression=zipfile.ZIP_DEFLATED) as zf:
+        zf.writestr("[Content_Types].xml", content_types_xml)
+        zf.writestr("_rels/.rels", root_rels_xml)
+        zf.writestr("xl/workbook.xml", workbook_xml)
+        zf.writestr("xl/_rels/workbook.xml.rels", workbook_rels_xml)
+        zf.writestr("xl/worksheets/sheet1.xml", sheet_xml)
+        zf.writestr("xl/styles.xml", styles_xml)
+
+    return output.getvalue()
+
+
+@router.get("/import/template")
+def download_user_import_template():
+    content = build_user_import_template_xlsx()
+    return Response(
+        content,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": 'attachment; filename="user_import_template.xlsx"'},
+    )
+
+
 @router.get("", response_model=list[UserResponse])
 def list_users(current_user=Depends(get_current_user)):
     uid = current_user["uid"]

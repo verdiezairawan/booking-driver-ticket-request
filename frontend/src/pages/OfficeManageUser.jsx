@@ -164,21 +164,32 @@ function OfficeManageUser() {
       reader.readAsDataURL(file)
     })
 
-  const downloadImportTemplate = () => {
-    const csv = [
-      'name,dept_job_position,role,nik,phone,email,password',
-      'John Doe,Finance,user,1234567890,081234567890,john@example.com,password123',
-    ].join('\n')
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
-    const url = URL.createObjectURL(blob)
+  const downloadImportTemplate = async () => {
+    setImportError('')
+    try {
+      const res = await fetch(`${API_BASE_URL}/users/import/template`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      })
 
-    const link = document.createElement('a')
-    link.href = url
-    link.download = 'user_import_template.csv'
-    document.body.appendChild(link)
-    link.click()
-    link.remove()
-    URL.revokeObjectURL(url)
+      if (!res.ok) {
+        const message = (await res.text()) || 'Failed to download template.'
+        setImportError(message)
+        return
+      }
+
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+
+      const link = document.createElement('a')
+      link.href = url
+      link.download = 'user_import_template.xlsx'
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      URL.revokeObjectURL(url)
+    } catch {
+      setImportError('Failed to download template.')
+    }
   }
 
   const handleImportUsers = async () => {
@@ -662,6 +673,7 @@ function OfficeManageUser() {
             <table className="office-table">
               <thead>
                 <tr>
+                  <th className="table-col-no">No</th>
                   <th>User Name</th>
                   <th>User Dept/Job Position</th>
                   <th>Role</th>
@@ -674,28 +686,29 @@ function OfficeManageUser() {
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan="7" className="muted">
+                    <td colSpan="8" className="muted">
                       Loading...
                     </td>
                   </tr>
                 ) : error ? (
                   <tr>
-                    <td colSpan="7" className="error-text">
+                    <td colSpan="8" className="error-text">
                       {error}
                     </td>
                   </tr>
                 ) : users.length === 0 ? (
                   <tr>
-                    <td colSpan="7" className="muted">
+                    <td colSpan="8" className="muted">
                       No users found.
                     </td>
                   </tr>
                 ) : (
-                  pagedUsers.map((user) => (
+                  pagedUsers.map((user, index) => (
                     <tr
                       key={user.uid}
                       style={{ background: selectedUser?.uid === user.uid ? 'var(--brand-soft)' : undefined }}
                     >
+                      <td className="table-col-no">{(currentPage - 1) * pageSize + index + 1}</td>
                       <td>{user.name || '-'}</td>
                       <td>{user.dept_job_position || '-'}</td>
                       <td>{user.role || '-'}</td>
@@ -999,7 +1012,7 @@ function OfficeManageUser() {
                     {importLoading ? 'Importing...' : 'Import'}
                   </button>
                   <button type="button" className="btn btn-neutral" onClick={downloadImportTemplate} disabled={importLoading}>
-                    Download Template CSV
+                    Download Template Excel
                   </button>
                   <button
                     type="button"

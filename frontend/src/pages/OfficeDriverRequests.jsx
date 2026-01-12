@@ -429,6 +429,7 @@ function OfficeDriverRequests() {
             <table className="office-table">
               <thead>
                 <tr>
+                  <th className="table-col-no">No</th>
                   <th>Name</th>
                   <th>User Dept/Job Position</th>
                   <th>Phone</th>
@@ -447,28 +448,29 @@ function OfficeDriverRequests() {
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan="13" className="muted">
+                    <td colSpan="14" className="muted">
                       Loading...
                     </td>
                   </tr>
                 ) : error ? (
                   <tr>
-                    <td colSpan="13" className="error-text">
+                    <td colSpan="14" className="error-text">
                       {error}
                     </td>
                   </tr>
                 ) : bookings.length === 0 ? (
                   <tr>
-                    <td colSpan="13" className="muted">
+                    <td colSpan="14" className="muted">
                       No driver requests found.
                     </td>
                   </tr>
                 ) : (
-                  pagedBookings.map((booking) => {
+                  pagedBookings.map((booking, index) => {
                     const statusValue = String(booking.status || 'pending').toLowerCase()
 
                     return (
                       <tr key={booking.id}>
+                        <td className="table-col-no">{(currentPage - 1) * pageSize + index + 1}</td>
                         <td>{booking.requester_name || '-'}</td>
                         <td>{booking.requester_dept_job_position || '-'}</td>
                         <td>{booking.requester_phone || '-'}</td>

@@ -457,6 +457,7 @@ function OfficeDriverHistory() {
         : 'all-time'
 
     const headers = [
+      'No',
       'Name',
       'User Dept/Job Position',
       'Phone',
@@ -480,7 +481,8 @@ function OfficeDriverHistory() {
       'Status',
     ]
 
-    const rows = sortedBookings.map((booking) => [
+    const rows = sortedBookings.map((booking, index) => [
+      index + 1,
       booking.requester_name || '',
       booking.requester_dept_job_position || '',
       booking.requester_phone || '',
@@ -576,7 +578,8 @@ function OfficeDriverHistory() {
 
           <div className="form-actions">
             <button type="button" className="btn btn-neutral" onClick={openRangeModal} disabled={loading}>
-              {hasLoaded ? 'Change Range' : 'Select Range'}
+              <i className="bi bi-calendar3" aria-hidden="true" />
+              {hasLoaded ? 'Change Date Range' : 'Date Range'}
             </button>
             <button
               type="button"
@@ -590,7 +593,7 @@ function OfficeDriverHistory() {
             </button>
           </div>
 
-          {hasLoaded ? <p className="muted">Range: {getActiveRangeLabel()}</p> : <p className="muted">Range: Not loaded</p>}
+          {hasLoaded ? <p className="muted">Date Range: {getActiveRangeLabel()}</p> : <p className="muted">Date Range: Not loaded</p>}
           {!loading && actionMessage ? <p className="success-text">{actionMessage}</p> : null}
           {!loading && actionError ? <p className="error-text">{actionError}</p> : null}
 
@@ -598,6 +601,7 @@ function OfficeDriverHistory() {
             <table className="office-table">
               <thead>
                 <tr>
+                  <th className="table-col-no">No</th>
                   <th>
                     <button type="button" className="table-sort" onClick={() => toggleSort('requester_name')}>
                       Name {renderSortIcon('requester_name')}
@@ -713,31 +717,32 @@ function OfficeDriverHistory() {
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan="22" className="muted">
+                    <td colSpan="23" className="muted">
                       Loading...
                     </td>
                   </tr>
                 ) : error ? (
                   <tr>
-                    <td colSpan="22" className="error-text">
+                    <td colSpan="23" className="error-text">
                       {error}
                     </td>
                   </tr>
                 ) : !hasLoaded ? (
                   <tr>
-                    <td colSpan="22" className="muted">
+                    <td colSpan="23" className="muted">
                       Select a date range to load driver history.
                     </td>
                   </tr>
                 ) : bookings.length === 0 ? (
                   <tr>
-                    <td colSpan="22" className="muted">
+                    <td colSpan="23" className="muted">
                       No driver history found.
                     </td>
                   </tr>
                 ) : (
-                  pagedBookings.map((booking) => (
+                  pagedBookings.map((booking, index) => (
                     <tr key={booking.id}>
+                      <td className="table-col-no">{(currentPage - 1) * pageSize + index + 1}</td>
                       <td>{booking.requester_name || '-'}</td>
                       <td>{booking.requester_dept_job_position || '-'}</td>
                       <td>{booking.requester_phone || '-'}</td>

@@ -289,6 +289,7 @@ function TicketHistory() {
               <table className="simple-table">
                 <thead>
                   <tr>
+                    <th className="table-col-no">No</th>
                     <th>
                       <button type="button" className="table-sort" onClick={() => toggleSort('created_at')}>
                         Submission Date {renderSortIcon('created_at')}
@@ -380,17 +381,18 @@ function TicketHistory() {
                 <tbody>
                   {tickets.length === 0 ? (
                     <tr>
-                      <td colSpan="18" className="muted">
+                      <td colSpan="19" className="muted">
                         No ticket requests yet.
                       </td>
                     </tr>
                   ) : (
-                    pagedTickets.map((ticket) => {
+                    pagedTickets.map((ticket, index) => {
                       const statusValue = (ticket.status || 'pending').toLowerCase()
                       const isPending = statusValue === 'pending'
 
                       return (
                         <tr key={ticket.id}>
+                          <td className="table-col-no">{(currentPage - 1) * pageSize + index + 1}</td>
                           <td>{formatDate(ticket.created_at)}</td>
                           <td className="cell-wrap">{ticket.full_name || '-'}</td>
                           <td>{ticket.national_id || '-'}</td>

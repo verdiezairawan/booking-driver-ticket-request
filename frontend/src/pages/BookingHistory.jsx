@@ -274,6 +274,7 @@ function BookingHistory() {
               <table className="simple-table">
                 <thead>
                   <tr>
+                    <th className="table-col-no">No</th>
                     <th>
                       <button type="button" className="table-sort" onClick={() => toggleSort('created_at')}>
                         Submission Date {renderSortIcon('created_at')}
@@ -344,17 +345,18 @@ function BookingHistory() {
                 <tbody>
                   {bookings.length === 0 ? (
                     <tr>
-                      <td colSpan="13" className="muted">
+                      <td colSpan="14" className="muted">
                         No driver bookings yet.
                       </td>
                     </tr>
                   ) : (
-                    pagedBookings.map((booking) => {
+                    pagedBookings.map((booking, index) => {
                       const statusValue = getBookingStatus(booking)
                       const isPending = statusValue === 'pending'
 
                       return (
                         <tr key={booking.id}>
+                          <td className="table-col-no">{(currentPage - 1) * pageSize + index + 1}</td>
                           <td>{formatDateOnly(booking.created_at)}</td>
                           <td className="cell-wrap">{booking.requester_name || '-'}</td>
                           <td>{booking.requester_nik || '-'}</td>
