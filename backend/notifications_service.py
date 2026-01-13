@@ -17,6 +17,7 @@ def create_user_notification(
     status: Optional[str] = None,
     actor_id: Optional[str] = None,
 ) -> Optional[str]:
+    """Create a notification entry under a user document and return the new notification id."""
     if not user_id:
         return None
 
@@ -51,6 +52,7 @@ def notify_roles(
     status: Optional[str] = None,
     actor_id: Optional[str] = None,
 ) -> int:
+    """Broadcast a notification to every user whose role is in the given list."""
     delivered = 0
     for role in roles:
         snapshots = db.collection("users").where("role", "==", role).stream()

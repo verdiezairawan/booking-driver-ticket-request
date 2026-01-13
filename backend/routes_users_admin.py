@@ -74,6 +74,7 @@ class UserImportResponse(BaseModel):
 
 
 def ensure_role(uid: str, allowed: tuple[str, ...]):
+    """Return the user's role and enforce the allowed roles."""
     doc = db.collection("users").document(uid).get()
     if not doc.exists:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User profile not found")
@@ -85,6 +86,7 @@ def ensure_role(uid: str, allowed: tuple[str, ...]):
 
 
 def serialize_user(doc_snapshot) -> UserResponse:
+    """Convert a Firestore user document into the API response schema."""
     data = doc_snapshot.to_dict() or {}
     return UserResponse(
         uid=doc_snapshot.id,
@@ -99,6 +101,7 @@ def serialize_user(doc_snapshot) -> UserResponse:
 
 
 def normalize_header(value: str) -> str:
+    """Normalize a header label so it matches our field mapping keys."""
     text = str(value or "").strip().lower()
     text = re.sub(r"[^a-z0-9]+", "_", text)
     return text.strip("_")
@@ -134,6 +137,7 @@ REQUIRED_IMPORT_FIELDS = ("name", "dept_job_position", "nik", "phone", "email", 
 
 
 def normalize_cell_value(value: str) -> str:
+    """Normalize imported cell text (trim, de-scientific, strip trailing .0)."""
     if value is None:
         return ""
     text = str(value).strip()
@@ -154,11 +158,13 @@ def normalize_cell_value(value: str) -> str:
 
 
 def normalize_email(value: str) -> str:
+    """Normalize an email value from imports (trim, lowercase, remove spaces)."""
     text = str(value or "").strip().lower()
     return re.sub(r"\s+", "", text)
 
 
 def format_validation_error(exc: ValidationError) -> str:
+    """Flatten Pydantic validation errors into a readable message."""
     parts: list[str] = []
     for err in exc.errors():
         loc = err.get("loc") or []
@@ -169,6 +175,7 @@ def format_validation_error(exc: ValidationError) -> str:
 
 
 def xlsx_column_index(cell_ref: str) -> Optional[int]:
+    """Convert an Excel cell reference (e.g. 'C2') into a zero-based column index."""
     if not cell_ref:
         return None
     letters = "".join(ch for ch in cell_ref if ch.isalpha())
@@ -181,6 +188,7 @@ def xlsx_column_index(cell_ref: str) -> Optional[int]:
 
 
 def xlsx_shared_strings(zf: zipfile.ZipFile) -> list[str]:
+    """Read the shared strings table from an .xlsx file (may be missing)."""
     try:
         raw = zf.read("xl/sharedStrings.xml")
     except KeyError:
@@ -198,6 +206,7 @@ def xlsx_shared_strings(zf: zipfile.ZipFile) -> list[str]:
 
 
 def xlsx_first_sheet_path(zf: zipfile.ZipFile) -> str:
+    """Resolve the first worksheet XML path from workbook relationships."""
     ns_main = {"m": "http://schemas.openxmlformats.org/spreadsheetml/2006/main"}
     ns_rel = {"r": "http://schemas.openxmlformats.org/package/2006/relationships"}
     rid_attr = "{http://schemas.openxmlformats.org/officeDocument/2006/relationships}id"
@@ -225,6 +234,7 @@ def xlsx_first_sheet_path(zf: zipfile.ZipFile) -> str:
 
 
 def xlsx_cell_text(cell: ET.Element, shared_strings: list[str], ns: dict[str, str]) -> str:
+    """Extract the textual value from a worksheet cell element."""
     cell_type = cell.attrib.get("t")
 
     if cell_type == "inlineStr":
@@ -254,6 +264,7 @@ def xlsx_cell_text(cell: ET.Element, shared_strings: list[str], ns: dict[str, st
 
 
 def parse_user_rows_from_xlsx(content: bytes) -> list[tuple[int, dict[str, str]]]:
+    """Parse user import rows from an .xlsx file into (row_number, payload) tuples."""
     zf = zipfile.ZipFile(io.BytesIO(content))
     shared = xlsx_shared_strings(zf)
     sheet_path = xlsx_first_sheet_path(zf)
@@ -320,6 +331,7 @@ def parse_user_rows_from_xlsx(content: bytes) -> list[tuple[int, dict[str, str]]
 
 
 def parse_user_rows_from_csv(content: bytes) -> list[tuple[int, dict[str, str]]]:
+    """Parse user import rows from a CSV file into (row_number, payload) tuples."""
     text = content.decode("utf-8-sig", errors="replace")
     reader = csv.reader(io.StringIO(text))
     rows = list(reader)
@@ -354,6 +366,7 @@ def parse_user_rows_from_csv(content: bytes) -> list[tuple[int, dict[str, str]]]
 
 
 def decode_import_file(payload: UserImportRequest) -> tuple[str, bytes]:
+    """Decode the base64 file payload and return the original filename + raw bytes."""
     try:
         raw = base64.b64decode(payload.file_base64, validate=True)
     except Exception as exc:
@@ -367,6 +380,7 @@ def decode_import_file(payload: UserImportRequest) -> tuple[str, bytes]:
 
 
 def parse_import_rows(filename: str, content: bytes) -> list[tuple[int, dict[str, str]]]:
+    """Parse import rows based on the filename extension (.xlsx or .csv)."""
     lower = filename.lower()
     if lower.endswith(".xlsx"):
         return parse_user_rows_from_xlsx(content)
@@ -377,6 +391,7 @@ def parse_import_rows(filename: str, content: bytes) -> list[tuple[int, dict[str
 
 
 def xlsx_column_letter(index: int) -> str:
+    """Convert a zero-based column index into an Excel column label (A, B, ...)."""
     if index < 0:
         raise ValueError("Column index must be non-negative")
 
@@ -390,6 +405,7 @@ def xlsx_column_letter(index: int) -> str:
 
 
 def xml_escape_text(value: str) -> str:
+    """Escape text so it is safe to embed in worksheet XML."""
     text = str(value or "")
     return (
         text.replace("&", "&amp;")
@@ -401,10 +417,12 @@ def xml_escape_text(value: str) -> str:
 
 
 def build_user_import_template_xlsx() -> bytes:
+    """Build an in-memory .xlsx template for user import (headers + example row)."""
     headers = ["name", "dept_job_position", "role", "nik", "phone", "email", "password"]
     example_row = ["John Doe", "Finance", "user", "1234567890", "081234567890", "john@example.com", "password123"]
 
     def make_row(row_number: int, values: list[str]) -> str:
+        """Generate a <row> element with inline string <c> cells."""
         cells: list[str] = []
         for col_idx, value in enumerate(values):
             cell_ref = f"{xlsx_column_letter(col_idx)}{row_number}"
@@ -483,6 +501,7 @@ def build_user_import_template_xlsx() -> bytes:
 
 @router.get("/import/template")
 def download_user_import_template():
+    """Download the user import template as an Excel (.xlsx) file."""
     content = build_user_import_template_xlsx()
     return Response(
         content,
@@ -493,12 +512,14 @@ def download_user_import_template():
 
 @router.get("", response_model=list[UserResponse])
 def list_users(current_user=Depends(get_current_user)):
+    """List all users sorted by name (office coordinator/superadmin only)."""
     uid = current_user["uid"]
     ensure_role(uid, ("office_coordinator", "superadmin"))
 
     snapshots = list(db.collection("users").stream())
 
     def name_value(doc):
+        """Return a normalized name string for stable sorting."""
         value = (doc.to_dict() or {}).get("name")
         if isinstance(value, str):
             return value.lower()
@@ -510,6 +531,7 @@ def list_users(current_user=Depends(get_current_user)):
 
 @router.post("/import", response_model=UserImportResponse)
 def import_users(payload: UserImportRequest, current_user=Depends(get_current_user)):
+    """Bulk import users from CSV/XLSX, optionally updating existing accounts."""
     uid = current_user["uid"]
     current_role = ensure_role(uid, ("office_coordinator", "superadmin"))
 
@@ -728,6 +750,7 @@ def import_users(payload: UserImportRequest, current_user=Depends(get_current_us
 
 @router.post("", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 def create_user(payload: UserCreate, current_user=Depends(get_current_user)):
+    """Create a new auth user and persist the profile in Firestore."""
     uid = current_user["uid"]
     current_role = ensure_role(uid, ("office_coordinator", "superadmin"))
 
@@ -761,6 +784,7 @@ def create_user(payload: UserCreate, current_user=Depends(get_current_user)):
 
 @router.patch("/{user_id}", response_model=UserResponse)
 def update_user(user_id: str, payload: UserUpdate, current_user=Depends(get_current_user)):
+    """Update a user's profile data and sync auth email when changed."""
     uid = current_user["uid"]
     current_role = ensure_role(uid, ("office_coordinator", "superadmin"))
 
@@ -808,6 +832,7 @@ def update_user(user_id: str, payload: UserUpdate, current_user=Depends(get_curr
 
 @router.patch("/{user_id}/password", response_model=UserResponse)
 def reset_password(user_id: str, payload: UserPasswordUpdate, current_user=Depends(get_current_user)):
+    """Reset a user's password in Firebase Auth (create auth account if missing)."""
     uid = current_user["uid"]
     current_role = ensure_role(uid, ("office_coordinator", "superadmin"))
 
@@ -859,6 +884,7 @@ def reset_password(user_id: str, payload: UserPasswordUpdate, current_user=Depen
 
 @router.patch("/{user_id}/deactivate", response_model=UserResponse)
 def deactivate_user(user_id: str, current_user=Depends(get_current_user)):
+    """Disable a user's Firebase Auth account and mark the profile as disabled."""
     uid = current_user["uid"]
     current_role = ensure_role(uid, ("office_coordinator", "superadmin"))
 
@@ -894,6 +920,7 @@ def deactivate_user(user_id: str, current_user=Depends(get_current_user)):
 
 @router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_user(user_id: str, current_user=Depends(get_current_user)):
+    """Delete a user from Firebase Auth and remove the Firestore profile."""
     uid = current_user["uid"]
     ensure_role(uid, ("superadmin",))
 

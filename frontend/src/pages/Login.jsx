@@ -13,6 +13,7 @@ const roleRouteMap = {
 
 const LOGO_SOURCES = ['/app-logo-blue.png', '/app-logo-black.png', '/app-logo-white.png', '/app-logo.png']
 
+// Map Firebase Auth errors into user-friendly login messages.
 const getLoginErrorMessage = (err) => {
   const code = err?.code
   if (code === 'auth/invalid-credential') {
@@ -33,6 +34,7 @@ const getLoginErrorMessage = (err) => {
   return 'Login failed. Please check your email and password.'
 }
 
+// Login page for all roles; redirects after fetching the user's role.
 function Login() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -43,10 +45,12 @@ function Login() {
 
   const navigate = useNavigate()
 
+  // Set a consistent document title for the login page.
   useEffect(() => {
     document.title = `Login | ${APP_NAME}`
   }, [])
 
+  // Sign in with Firebase and fetch the role from the API.
   const handleSubmit = async (event) => {
     event.preventDefault()
     setError('')

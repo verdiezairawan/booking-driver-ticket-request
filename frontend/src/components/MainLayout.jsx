@@ -4,6 +4,7 @@ import { signOut } from 'firebase/auth'
 import { auth } from '../firebase'
 import { API_BASE_URL, APP_NAME } from '../config'
 
+// Shared page shell with header, notifications, and logout.
 function MainLayout({ title, children }) {
   const navigate = useNavigate()
   const [notificationsOpen, setNotificationsOpen] = useState(false)
@@ -12,6 +13,7 @@ function MainLayout({ title, children }) {
   const [notificationsError, setNotificationsError] = useState('')
   const notificationsContainerRef = useRef(null)
 
+  // Keep the browser tab title in sync with the current page.
   useEffect(() => {
     const trimmedTitle = typeof title === 'string' ? title.trim() : ''
     document.title = trimmedTitle ? `${trimmedTitle} | ${APP_NAME}` : APP_NAME
@@ -22,6 +24,7 @@ function MainLayout({ title, children }) {
     [notifications]
   )
 
+  // Format Firestore timestamps into a readable local date/time string.
   const formatTimestamp = (value) => {
     if (!value) return ''
     const dateValue = value?.seconds ? new Date(value.seconds * 1000) : new Date(value)
@@ -35,6 +38,7 @@ function MainLayout({ title, children }) {
     })
   }
 
+  // Fetch latest notifications for the current user.
   const fetchNotifications = async () => {
     const token = localStorage.getItem('authToken')
     if (!token) return
@@ -67,6 +71,7 @@ function MainLayout({ title, children }) {
     }
   }
 
+  // Mark all notifications as read on the server and in local state.
   const markAllNotificationsRead = async () => {
     const token = localStorage.getItem('authToken')
     if (!token) return
@@ -82,6 +87,7 @@ function MainLayout({ title, children }) {
     }
   }
 
+  // Poll notifications and listen for manual refresh events.
   useEffect(() => {
     fetchNotifications()
 
@@ -89,6 +95,7 @@ function MainLayout({ title, children }) {
       fetchNotifications()
     }, 30000)
 
+    // Allow other pages to request a refresh without prop-drilling.
     const handleRefresh = () => {
       fetchNotifications()
     }
@@ -102,9 +109,11 @@ function MainLayout({ title, children }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // Close the notifications dropdown on outside click or Escape.
   useEffect(() => {
     if (!notificationsOpen) return
 
+    // Close dropdown when the click/tap happens outside the container.
     const handlePointerDown = (event) => {
       const container = notificationsContainerRef.current
       if (!container) return
@@ -112,6 +121,7 @@ function MainLayout({ title, children }) {
       setNotificationsOpen(false)
     }
 
+    // Close dropdown on Escape for better keyboard UX.
     const handleKeyDown = (event) => {
       if (event.key === 'Escape') {
         setNotificationsOpen(false)
@@ -126,6 +136,7 @@ function MainLayout({ title, children }) {
     }
   }, [notificationsOpen])
 
+  // Sign out and return to the login page.
   const handleLogout = async () => {
     localStorage.removeItem('authToken')
 

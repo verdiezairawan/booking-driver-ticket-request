@@ -18,6 +18,7 @@ import AdminManageUser from './pages/AdminManageUser'
 import ProtectedRoute from './components/ProtectedRoute'
 import './App.css'
 
+// Main router for all app pages.
 function App() {
   return (
     <Router>

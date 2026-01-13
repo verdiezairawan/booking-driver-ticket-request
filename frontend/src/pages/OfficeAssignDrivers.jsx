@@ -30,6 +30,7 @@ const initialForm = {
   passenger_count: 1,
 }
 
+// Manual driver assignment form for office coordinators.
 function OfficeAssignDrivers() {
   const navigate = useNavigate()
   const { collapsed: isSidebarCollapsed, toggle: toggleSidebar } = useOfficeSidebar()
@@ -47,6 +48,7 @@ function OfficeAssignDrivers() {
   const [unavailableDriverIds, setUnavailableDriverIds] = useState(() => new Set())
   const [availabilityChecked, setAvailabilityChecked] = useState(false)
 
+  // Load the list of available drivers (role === 'driver').
   useEffect(() => {
     const token = localStorage.getItem('authToken')
     if (!token) {
@@ -54,6 +56,7 @@ function OfficeAssignDrivers() {
       return
     }
 
+    // Fetch drivers from the user list endpoint.
     const loadDrivers = async () => {
       setDriversLoading(true)
       setDriversError('')
@@ -89,6 +92,7 @@ function OfficeAssignDrivers() {
     loadDrivers()
   }, [])
 
+  // Check driver availability whenever departure date/time changes.
   useEffect(() => {
     setAvailabilityError('')
     setAvailabilityChecked(false)
@@ -114,6 +118,7 @@ function OfficeAssignDrivers() {
     }
 
     const controller = new AbortController()
+    // Fetch the driver ids that are busy for the selected departure time.
     const loadUnavailableDrivers = async () => {
       setAvailabilityLoading(true)
       setAvailabilityChecked(true)
@@ -157,6 +162,7 @@ function OfficeAssignDrivers() {
     return () => controller.abort()
   }, [form.departure_date, form.departure_time])
 
+  // Guard against selecting a driver that is flagged as unavailable.
   useEffect(() => {
     if (!form.driver_email) return
     if (!form.departure_date || !form.departure_time) return
@@ -171,6 +177,7 @@ function OfficeAssignDrivers() {
     }
   }, [drivers, form.departure_date, form.departure_time, form.driver_email, unavailableDriverIds])
 
+  // Handle sidebar navigation clicks.
   const handleNavigate = (item) => {
     if (item === 'Dashboard') navigate('/office/home')
     if (item === 'Travel Requests') navigate('/office/ticket-requests')
@@ -182,6 +189,7 @@ function OfficeAssignDrivers() {
     if (item === 'Manage User') navigate('/office/manage-user')
   }
 
+  // Update form fields and reset availability errors as needed.
   const handleChange = (field) => (event) => {
     const value = field === 'passenger_count' ? event.target.value : event.target.value
     if (field === 'driver_email') {
@@ -193,6 +201,7 @@ function OfficeAssignDrivers() {
     }))
   }
 
+  // Submit the manual assignment request.
   const handleSubmit = async (event) => {
     event.preventDefault()
     setLoading(true)

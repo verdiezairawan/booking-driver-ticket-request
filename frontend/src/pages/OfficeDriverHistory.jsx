@@ -15,6 +15,7 @@ const menuItems = [
   { label: 'Manage User', icon: 'bi-people' },
 ]
 
+// Driver booking history page for office coordinators (with export + date range).
 function OfficeDriverHistory() {
   const navigate = useNavigate()
   const { collapsed: isSidebarCollapsed, toggle: toggleSidebar } = useOfficeSidebar()
@@ -36,6 +37,7 @@ function OfficeDriverHistory() {
 
   const pageSize = 10
 
+  // Convert Firestore timestamps/ISO strings into a Date instance.
   const toDate = (value) => {
     if (!value) return null
     if (value?.seconds) return new Date(value.seconds * 1000)
@@ -43,6 +45,7 @@ function OfficeDriverHistory() {
     return Number.isNaN(dt.getTime()) ? null : dt
   }
 
+  // Compute total kilometers based on starting/ending mileage.
   const getDistanceNumber = (booking) => {
     const starting = Number(booking?.starting_mileage)
     const ending = Number(booking?.ending_mileage)
@@ -51,6 +54,7 @@ function OfficeDriverHistory() {
     return ending - starting
   }
 
+  // Provide a stable sort value per table column.
   const getBookingSortValue = (booking, key) => {
     if (!booking) return ''
     switch (key) {
@@ -116,6 +120,7 @@ function OfficeDriverHistory() {
     }
   }
 
+  // Compare values while keeping empty values at the bottom.
   const compareValues = (aValue, bValue) => {
     const aEmpty = aValue === null || aValue === undefined || aValue === ''
     const bEmpty = bValue === null || bValue === undefined || bValue === ''
@@ -134,6 +139,7 @@ function OfficeDriverHistory() {
     })
   }
 
+  // Sort bookings based on the active column/direction.
   const sortedBookings = useMemo(() => {
     if (!sortConfig.key) return bookings
 
@@ -157,10 +163,12 @@ function OfficeDriverHistory() {
   const currentPage = Math.min(page, totalPages)
   const pagedBookings = sortedBookings.slice((currentPage - 1) * pageSize, currentPage * pageSize)
 
+  // Keep page index within bounds when the list size changes.
   useEffect(() => {
     setPage((prev) => Math.min(prev, totalPages))
   }, [totalPages])
 
+  // Build the label shown beside the active date range selector.
   const getActiveRangeLabel = () => {
     if (!hasLoaded) return 'Not loaded'
     if (activeRange.mode === 'all') return 'All time'
@@ -168,6 +176,7 @@ function OfficeDriverHistory() {
     return 'Custom range'
   }
 
+  // Open the date range modal and prefill with current range.
   const openRangeModal = () => {
     setRangeError('')
     setRangeMode(activeRange.mode || 'all')
@@ -176,12 +185,14 @@ function OfficeDriverHistory() {
     setRangeModalOpen(true)
   }
 
+  // Close the range modal unless a fetch is in progress.
   const closeRangeModal = () => {
     if (loading) return
     setRangeError('')
     setRangeModalOpen(false)
   }
 
+  // Convert the date-only range into concrete Date objects for filtering.
   const getRangeBounds = (range) => {
     if (!range || range.mode !== 'range') return { start: null, end: null }
     const start = new Date(`${range.start}T00:00:00`)
@@ -192,6 +203,7 @@ function OfficeDriverHistory() {
     return { start, end }
   }
 
+  // Load driver booking history and apply optional date filtering client-side.
   const loadBookings = async (range) => {
     const token = localStorage.getItem('authToken')
     if (!token) {
@@ -247,6 +259,7 @@ function OfficeDriverHistory() {
     }
   }
 
+  // Validate and apply the current range selection, then reload data.
   const applyRange = async () => {
     setRangeError('')
 
@@ -276,6 +289,7 @@ function OfficeDriverHistory() {
     await loadBookings(nextRange)
   }
 
+  // Handle sidebar navigation clicks.
   const handleNavigate = (item) => {
     if (item === 'Dashboard') navigate('/office/home')
     if (item === 'Travel Requests') navigate('/office/ticket-requests')
@@ -287,16 +301,19 @@ function OfficeDriverHistory() {
     if (item === 'Manage User') navigate('/office/manage-user')
   }
 
+  // Format a date-only value for table display.
   const formatDate = (value) => {
     const dt = toDate(value)
     return dt ? dt.toLocaleDateString('en-GB') : '-'
   }
 
+  // Format weekday name for exports/table.
   const formatDay = (value) => {
     const dt = toDate(value)
     return dt ? dt.toLocaleDateString('en-US', { weekday: 'short' }) : '-'
   }
 
+  // Format time values for table display.
   const formatTime = (value) => {
     const dt = toDate(value)
     return dt
@@ -304,6 +321,7 @@ function OfficeDriverHistory() {
       : '-'
   }
 
+  // Convert trip type values into user-facing labels.
   const formatTripType = (value) => {
     if (!value) return '-'
     if (value === 'antar') return 'Drop-off'
@@ -312,6 +330,7 @@ function OfficeDriverHistory() {
     return value
   }
 
+  // Normalize booking status for UI (approved + started => in_progress).
   const getBookingStatus = (booking) => {
     const raw = String(booking?.status || 'pending').toLowerCase()
     if (raw === 'approved') {
@@ -321,17 +340,20 @@ function OfficeDriverHistory() {
     return raw
   }
 
+  // Format status strings for display.
   const formatStatusText = (value) => {
     if (!value) return '-'
     return String(value).replace(/_/g, ' ')
   }
 
+  // Determine whether the booking can still be cancelled by the office.
   const canCancelBooking = (booking) => {
     const status = getBookingStatus(booking)
     const hasStarted = booking?.starting_mileage !== null && booking?.starting_mileage !== undefined
     return status === 'approved' && !hasStarted && !booking?.started_at
   }
 
+  // Cancel an approved booking before it has started.
   const handleCancelBooking = async (booking) => {
     const confirmed = window.confirm('Cancel this approved booking?')
     if (!confirmed) return
@@ -374,6 +396,7 @@ function OfficeDriverHistory() {
     }
   }
 
+  // Compute trip duration in minutes based on started/completed timestamps.
   function getDurationMinutes(booking) {
     const startedAt = toDate(booking?.started_at)
     const completedAt = toDate(booking?.completed_at)
@@ -383,6 +406,7 @@ function OfficeDriverHistory() {
     return Math.floor(diffMs / 60000)
   }
 
+  // Format duration into "Xh YYm".
   const formatDuration = (booking) => {
     const minutes = getDurationMinutes(booking)
     if (minutes === null) return '-'
@@ -391,6 +415,7 @@ function OfficeDriverHistory() {
     return `${hours}h ${String(mins).padStart(2, '0')}m`
   }
 
+  // Compute overtime minutes beyond an 8-hour baseline.
   function getOvertimeMinutes(booking) {
     const minutes = getDurationMinutes(booking)
     if (minutes === null) return null
@@ -398,23 +423,27 @@ function OfficeDriverHistory() {
     return overtime > 0 ? overtime : 0
   }
 
+  // Format overtime hours for exports/table.
   const formatOvertimeHours = (booking) => {
     const overtimeMinutes = getOvertimeMinutes(booking)
     if (overtimeMinutes === null) return '-'
     return String(Math.floor(overtimeMinutes / 60))
   }
 
+  // Format overtime minutes for exports/table.
   const formatOvertimeMinutes = (booking) => {
     const overtimeMinutes = getOvertimeMinutes(booking)
     if (overtimeMinutes === null) return '-'
     return String(overtimeMinutes % 60)
   }
 
+  // Format distance in kilometers for table display.
   const formatDistance = (booking) => {
     const distance = getDistanceNumber(booking)
     return distance === null ? '-' : String(distance)
   }
 
+  // Toggle sort direction for a column (or activate a new sort key).
   const toggleSort = (key) => {
     setPage(1)
     setSortConfig((prev) => {
@@ -425,6 +454,7 @@ function OfficeDriverHistory() {
     })
   }
 
+  // Render the sort icon for the table header.
   const renderSortIcon = (key) => {
     const isActive = sortConfig.key === key
     if (!isActive) {
@@ -438,6 +468,7 @@ function OfficeDriverHistory() {
     )
   }
 
+  // Escape values for the HTML-based Excel export.
   const escapeHtml = (value) => {
     if (value === null || value === undefined) return ''
     return String(value)
@@ -448,6 +479,7 @@ function OfficeDriverHistory() {
       .replace(/'/g, '&#39;')
   }
 
+  // Export the current filtered/sorted view as an Excel-readable HTML table.
   const handleExport = () => {
     if (!sortedBookings.length) return
 

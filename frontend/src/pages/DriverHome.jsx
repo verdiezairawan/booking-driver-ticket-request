@@ -13,6 +13,7 @@ const STATUS_STEPS = [
   { key: 'completed', label: 'Completed' },
 ]
 
+// Driver task dashboard (calendar + status stepper + start/finish flow).
 function DriverHome() {
   const [bookings, setBookings] = useState([])
   const [loading, setLoading] = useState(true)
@@ -54,6 +55,7 @@ function DriverHome() {
     return endingValue < startingValue
   }, [activeBooking?.starting_mileage, endingMileage])
 
+  // Load bookings assigned to the signed-in driver.
   useEffect(() => {
     const token = localStorage.getItem('authToken')
     if (!token) {
@@ -62,6 +64,7 @@ function DriverHome() {
       return
     }
 
+    // Fetch assigned bookings for the driver.
     const loadAssigned = async () => {
       setLoading(true)
       setError('')
@@ -94,6 +97,7 @@ function DriverHome() {
     loadAssigned()
   }, [])
 
+  // Update a booking record in local state after actions.
   const updateBookingInState = (bookingId, updatedFields) => {
     setBookings((prev) =>
       prev.map((booking) => {
@@ -103,6 +107,7 @@ function DriverHome() {
     )
   }
 
+  // Open the start trip modal for a booking.
   const openStartModal = (booking) => {
     setActiveBooking(booking)
     setStartingMileage('')
@@ -111,6 +116,7 @@ function DriverHome() {
     setActionError('')
   }
 
+  // Open the finish trip modal for a booking.
   const openFinishModal = (booking) => {
     setActiveBooking(booking)
     setEndingMileage('')
@@ -119,6 +125,7 @@ function DriverHome() {
     setActionError('')
   }
 
+  // Close all modals and reset transient state.
   const closeModals = () => {
     setStartModalOpen(false)
     setFinishModalOpen(false)
@@ -129,6 +136,7 @@ function DriverHome() {
     signatureHasInkRef.current = false
   }
 
+  // Clear the signature canvas and reset ink tracking.
   const resetSignatureCanvas = () => {
     const canvas = signatureCanvasRef.current
     if (!canvas) return
@@ -141,6 +149,7 @@ function DriverHome() {
     signatureHasInkRef.current = false
   }
 
+  // Initialize the signature canvas size and drawing settings.
   const setupSignatureCanvas = () => {
     const canvas = signatureCanvasRef.current
     if (!canvas) return
@@ -159,12 +168,14 @@ function DriverHome() {
     ctx.strokeStyle = '#111827'
   }
 
+  // Prepare the signature canvas whenever the finish modal is shown.
   useEffect(() => {
     if (!finishModalOpen) return
     setupSignatureCanvas()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [finishModalOpen])
 
+  // Translate pointer events into canvas coordinates.
   const getSignaturePoint = (event) => {
     const canvas = signatureCanvasRef.current
     if (!canvas) return null
@@ -177,6 +188,7 @@ function DriverHome() {
     }
   }
 
+  // Start signature drawing on pointer down.
   const handleSignaturePointerDown = (event) => {
     if (event.button !== undefined && event.button !== 0) return
     const canvas = signatureCanvasRef.current
@@ -204,6 +216,7 @@ function DriverHome() {
     }
   }
 
+  // Draw signature strokes as the pointer moves.
   const handleSignaturePointerMove = (event) => {
     if (!signatureDrawingRef.current) return
     const canvas = signatureCanvasRef.current
@@ -225,6 +238,7 @@ function DriverHome() {
     signatureHasInkRef.current = true
   }
 
+  // Stop signature drawing and release pointer capture.
   const handleSignaturePointerEnd = (event) => {
     if (!signatureDrawingRef.current) return
     signatureDrawingRef.current = false
@@ -239,6 +253,7 @@ function DriverHome() {
     }
   }
 
+  // Mark a booking as started and store starting mileage.
   const handleStart = async () => {
     if (!activeBooking?.id) return
 
@@ -295,6 +310,7 @@ function DriverHome() {
     }
   }
 
+  // Mark a booking as completed and upload mileage + signature proof.
   const handleFinish = async () => {
     if (!activeBooking?.id) return
 
@@ -361,6 +377,7 @@ function DriverHome() {
     }
   }
 
+  // Normalize booking status for UI (approved + started => in_progress).
   const getBookingStatus = (booking) => {
     const raw = String(booking?.status || 'pending').toLowerCase()
 
@@ -372,11 +389,13 @@ function DriverHome() {
     return raw
   }
 
+  // Format status values into human readable text.
   const formatStatusText = (value) => {
     if (!value) return '-'
     return String(value).replace(/_/g, ' ')
   }
 
+  // Render the horizontal status stepper for a booking status value.
   const renderStatusStepper = (value) => {
     const statusValue = String(value || '').toLowerCase()
     const activeIndex = STATUS_STEPS.findIndex((step) => step.key === statusValue)
@@ -423,6 +442,7 @@ function DriverHome() {
     )
   }
 
+  // Convert a Date into YYYY-MM-DD for grouping/filtering.
   function toDateKey(date) {
     if (!(date instanceof Date) || Number.isNaN(date.getTime())) return ''
     const year = String(date.getFullYear())
@@ -460,6 +480,7 @@ function DriverHome() {
         ? dateFiltered.filter((b) => b.status === 'completed')
         : dateFiltered.filter((b) => b.status !== 'completed')
 
+    // Ensure invalid date values don't crash sorting.
     const safeTime = (value) => {
       const dt = new Date(value)
       return Number.isNaN(dt.getTime()) ? null : dt
@@ -529,6 +550,7 @@ function DriverHome() {
   const selectedKey = toDateKey(selectedDate)
   const todayKey = useMemo(() => toDateKey(new Date()), [])
 
+  // Format the combined departure date/time for display.
   const formatDeparture = (value) => {
     if (!value) return '-'
     const dt = new Date(value)
@@ -538,6 +560,7 @@ function DriverHome() {
     return `${datePart} ${timePart}`
   }
 
+  // Convert trip type values into user-facing labels.
   const formatTripType = (value) => {
     if (!value) return '-'
     if (value === 'antar') return 'Drop-off'
@@ -546,6 +569,7 @@ function DriverHome() {
     return value
   }
 
+  // Move the calendar to the next/previous month and adjust selected day.
   const changeMonth = (delta) => {
     const targetMonth = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() + delta, 1)
     const today = new Date()

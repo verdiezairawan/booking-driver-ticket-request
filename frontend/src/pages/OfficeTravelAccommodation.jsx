@@ -36,6 +36,7 @@ const initialForm = {
   additional_notes: '',
 }
 
+// Create a travel request on behalf of a user (office coordinator flow).
 function OfficeTravelAccommodation() {
   const navigate = useNavigate()
   const { collapsed: isSidebarCollapsed, toggle: toggleSidebar } = useOfficeSidebar()
@@ -45,6 +46,7 @@ function OfficeTravelAccommodation() {
   const [errorMessage, setErrorMessage] = useState('')
   const [showSuccessModal, setShowSuccessModal] = useState(false)
 
+  // Handle sidebar navigation clicks.
   const handleNavigate = (item) => {
     if (item === 'Dashboard') navigate('/office/home')
     if (item === 'Travel Requests') navigate('/office/ticket-requests')
@@ -56,6 +58,7 @@ function OfficeTravelAccommodation() {
     if (item === 'Manage User') navigate('/office/manage-user')
   }
 
+  // Update form fields and clear dependent values when options change.
   const handleChange = (field) => (event) => {
     const value = event.target.value
     setForm((prev) => ({
@@ -68,6 +71,7 @@ function OfficeTravelAccommodation() {
     }))
   }
 
+  // Submit the travel accommodation request.
   const handleSubmit = async (event) => {
     event.preventDefault()
     setLoading(true)

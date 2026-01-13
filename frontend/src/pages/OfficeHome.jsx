@@ -20,6 +20,7 @@ const actionConfig = [
   { label: 'Pending Booking Driver', type: 'bookingPending', icon: 'bi-car-front-fill' },
 ]
 
+// Dashboard for office coordinators.
 function OfficeHome() {
   const navigate = useNavigate()
   const { collapsed: isSidebarCollapsed, toggle: toggleSidebar } = useOfficeSidebar()
@@ -29,10 +30,12 @@ function OfficeHome() {
     bookingPending: 0,
   })
 
+  // Load the user profile and the current pending counts.
   useEffect(() => {
     const token = localStorage.getItem('authToken')
     if (!token) return
 
+    // Fetch profile for the greeting line.
     const loadProfile = async () => {
       try {
         const res = await fetch(`${API_BASE_URL}/users/me`, {
@@ -47,6 +50,7 @@ function OfficeHome() {
       }
     }
 
+    // Fetch ticket/booking stats for the dashboard cards.
     const loadStats = async () => {
       try {
         const [ticketRes, bookingRes] = await Promise.all([
@@ -74,6 +78,7 @@ function OfficeHome() {
     loadStats()
   }, [])
 
+  // Handle sidebar navigation clicks.
   const handleNavigate = (item) => {
     if (item === 'Dashboard') navigate('/office/home')
     if (item === 'Travel Requests') navigate('/office/ticket-requests')

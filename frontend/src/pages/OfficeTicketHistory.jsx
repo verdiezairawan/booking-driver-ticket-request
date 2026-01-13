@@ -15,6 +15,7 @@ const menuItems = [
   { label: 'Manage User', icon: 'bi-people' },
 ]
 
+// Travel request history page for office coordinators (with export + date range).
 function OfficeTicketHistory() {
   const navigate = useNavigate()
   const { collapsed: isSidebarCollapsed, toggle: toggleSidebar } = useOfficeSidebar()
@@ -33,6 +34,7 @@ function OfficeTicketHistory() {
 
   const pageSize = 10
 
+  // Convert Firestore timestamps/ISO strings into a Date instance.
   const toDate = (value) => {
     if (!value) return null
     if (value?.seconds) return new Date(value.seconds * 1000)
@@ -40,6 +42,7 @@ function OfficeTicketHistory() {
     return Number.isNaN(dt.getTime()) ? null : dt
   }
 
+  // Provide a stable sort value per table column.
   const getTicketSortValue = (ticket, key) => {
     if (!ticket) return ''
     switch (key) {
@@ -84,6 +87,7 @@ function OfficeTicketHistory() {
     }
   }
 
+  // Compare values while keeping empty values at the bottom.
   const compareValues = (aValue, bValue) => {
     const aEmpty = aValue === null || aValue === undefined || aValue === ''
     const bEmpty = bValue === null || bValue === undefined || bValue === ''
@@ -102,6 +106,7 @@ function OfficeTicketHistory() {
     })
   }
 
+  // Sort tickets based on the active column/direction.
   const sortedTickets = useMemo(() => {
     if (!sortConfig.key) return tickets
 
@@ -125,10 +130,12 @@ function OfficeTicketHistory() {
   const currentPage = Math.min(page, totalPages)
   const pagedTickets = sortedTickets.slice((currentPage - 1) * pageSize, currentPage * pageSize)
 
+  // Keep page index within bounds when the list size changes.
   useEffect(() => {
     setPage((prev) => Math.min(prev, totalPages))
   }, [totalPages])
 
+  // Build the label shown beside the active date range selector.
   const getActiveRangeLabel = () => {
     if (!hasLoaded) return 'Not loaded'
     if (activeRange.mode === 'all') return 'All time'
@@ -136,6 +143,7 @@ function OfficeTicketHistory() {
     return 'Custom range'
   }
 
+  // Open the date range modal and prefill with current range.
   const openRangeModal = () => {
     setRangeError('')
     setRangeMode(activeRange.mode || 'all')
@@ -144,12 +152,14 @@ function OfficeTicketHistory() {
     setRangeModalOpen(true)
   }
 
+  // Close the range modal unless a fetch is in progress.
   const closeRangeModal = () => {
     if (loading) return
     setRangeError('')
     setRangeModalOpen(false)
   }
 
+  // Convert the date-only range into concrete Date objects for filtering.
   const getRangeBounds = (range) => {
     if (!range || range.mode !== 'range') return { start: null, end: null }
     const start = new Date(`${range.start}T00:00:00`)
@@ -160,6 +170,7 @@ function OfficeTicketHistory() {
     return { start, end }
   }
 
+  // Load ticket history and apply optional date filtering client-side.
   const loadTickets = async (range) => {
     const token = localStorage.getItem('authToken')
     if (!token) {
@@ -215,6 +226,7 @@ function OfficeTicketHistory() {
     }
   }
 
+  // Validate and apply the current range selection, then reload data.
   const applyRange = async () => {
     setRangeError('')
 
@@ -244,11 +256,13 @@ function OfficeTicketHistory() {
     await loadTickets(nextRange)
   }
 
+  // Format a date-only value for table display.
   const formatDate = (value) => {
     const dt = toDate(value)
     return dt ? dt.toLocaleDateString('en-GB') : '-'
   }
 
+  // Toggle sort direction for a column (or activate a new sort key).
   const toggleSort = (key) => {
     setPage(1)
     setSortConfig((prev) => {
@@ -259,6 +273,7 @@ function OfficeTicketHistory() {
     })
   }
 
+  // Render the sort icon for the table header.
   const renderSortIcon = (key) => {
     const isActive = sortConfig.key === key
     if (!isActive) {
@@ -272,6 +287,7 @@ function OfficeTicketHistory() {
     )
   }
 
+  // Escape values for the HTML-based Excel export.
   const escapeHtml = (value) => {
     if (value === null || value === undefined) return ''
     return String(value)
@@ -282,6 +298,7 @@ function OfficeTicketHistory() {
       .replace(/'/g, '&#39;')
   }
 
+  // Export the current filtered/sorted view as an Excel-readable HTML table.
   const handleExport = () => {
     if (!sortedTickets.length) return
 
@@ -361,6 +378,7 @@ function OfficeTicketHistory() {
     URL.revokeObjectURL(url)
   }
 
+  // Handle sidebar navigation clicks.
   const handleNavigate = (item) => {
     if (item === 'Dashboard') navigate('/office/home')
     if (item === 'Travel Requests') navigate('/office/ticket-requests')

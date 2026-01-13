@@ -12,6 +12,7 @@ const initialForm = {
   passenger_count: 1,
 }
 
+// Create/edit a driver booking request.
 function BookingDriver() {
   const navigate = useNavigate()
   const location = useLocation()
@@ -21,6 +22,7 @@ function BookingDriver() {
   const [showSuccessModal, setShowSuccessModal] = useState(false)
   const [editingBookingId, setEditingBookingId] = useState('')
 
+  // Convert Firestore timestamps/ISO strings into a Date instance.
   const toDate = (value) => {
     if (!value) return null
     if (value?.seconds) return new Date(value.seconds * 1000)
@@ -28,6 +30,7 @@ function BookingDriver() {
     return Number.isNaN(parsed.getTime()) ? null : parsed
   }
 
+  // Format a Date into the YYYY-MM-DD input format.
   const formatDateInput = (date) => {
     const year = String(date.getFullYear())
     const month = String(date.getMonth() + 1).padStart(2, '0')
@@ -35,12 +38,14 @@ function BookingDriver() {
     return `${year}-${month}-${day}`
   }
 
+  // Format a Date into the HH:mm input format.
   const formatTimeInput = (date) => {
     const hours = String(date.getHours()).padStart(2, '0')
     const minutes = String(date.getMinutes()).padStart(2, '0')
     return `${hours}:${minutes}`
   }
 
+  // Update form field values, including passenger count parsing.
   const handleChange = (field) => (event) => {
     const value = field === 'passenger_count' ? event.target.value : event.target.value
     setForm((prev) => ({
@@ -49,6 +54,7 @@ function BookingDriver() {
     }))
   }
 
+  // Prefill the form when navigating from history with an existing booking.
   useEffect(() => {
     const booking = location.state?.booking
     if (!booking?.id) {
@@ -72,6 +78,7 @@ function BookingDriver() {
     setErrorMessage('')
   }, [location.state])
 
+  // Submit a new booking or save changes to an existing one.
   const handleSubmit = async (event) => {
     event.preventDefault()
     setLoading(true)

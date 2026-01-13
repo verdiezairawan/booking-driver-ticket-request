@@ -19,6 +19,7 @@ const initialForm = {
   additional_notes: '',
 }
 
+// Create/edit travel accommodation requests.
 function TicketRequest() {
   const navigate = useNavigate()
   const location = useLocation()
@@ -28,6 +29,7 @@ function TicketRequest() {
   const [showSuccessModal, setShowSuccessModal] = useState(false)
   const [editingTicketId, setEditingTicketId] = useState('')
 
+  // Update form fields and clear dependent inputs when switching options.
   const handleChange = (field) => (event) => {
     const value = event.target.value
     setForm((prev) => {
@@ -49,6 +51,7 @@ function TicketRequest() {
     })
   }
 
+  // If navigated from history with a ticket payload, prefill the form for editing.
   useEffect(() => {
     const ticket = location.state?.ticket
     if (!ticket?.id) {
@@ -76,6 +79,7 @@ function TicketRequest() {
     })
   }, [location.state])
 
+  // Submit a new request or update an existing ticket.
   const handleSubmit = async (event) => {
     event.preventDefault()
     setLoading(true)

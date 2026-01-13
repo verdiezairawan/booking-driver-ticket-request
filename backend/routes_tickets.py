@@ -55,6 +55,7 @@ class TicketStatusUpdate(BaseModel):
 
 
 def serialize_ticket(doc_snapshot) -> TicketResponse:
+    """Convert a Firestore ticket document into the API response model."""
     data = doc_snapshot.to_dict() or {}
     return TicketResponse(
         id=doc_snapshot.id,
@@ -85,6 +86,7 @@ def serialize_ticket(doc_snapshot) -> TicketResponse:
 
 
 def ensure_user_role(uid: str):
+    """Ensure the given uid exists and has role `user`; returns the user profile data."""
     doc = db.collection("users").document(uid).get()
     if not doc.exists:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User profile not found")
@@ -97,6 +99,7 @@ def ensure_user_role(uid: str):
 
 
 def ensure_role(uid: str, allowed: tuple[str, ...]):
+    """Ensure the user has one of the allowed roles."""
     doc = db.collection("users").document(uid).get()
     if not doc.exists:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User profile not found")
@@ -107,6 +110,7 @@ def ensure_role(uid: str, allowed: tuple[str, ...]):
 
 @router.get("/pending", response_model=list[TicketResponse])
 def list_pending_tickets(current_user=Depends(get_current_user)):
+    """List pending travel requests for office coordinators and superadmins."""
     uid = current_user["uid"]
     ensure_role(uid, ("office_coordinator", "superadmin"))
 
@@ -114,6 +118,7 @@ def list_pending_tickets(current_user=Depends(get_current_user)):
     snapshots = list(query.stream())
 
     def created_at_value(doc):
+        """Sort helper: return created_at timestamp for stable ordering."""
         value = doc.to_dict().get("created_at")
         if isinstance(value, datetime):
             return value
@@ -125,12 +130,14 @@ def list_pending_tickets(current_user=Depends(get_current_user)):
 
 @router.get("/history", response_model=list[TicketResponse])
 def list_ticket_history(current_user=Depends(get_current_user)):
+    """List non-pending travel requests (history) for office coordinators and superadmins."""
     uid = current_user["uid"]
     ensure_role(uid, ("office_coordinator", "superadmin"))
 
     snapshots = list(db.collection("tickets").stream())
 
     def created_at_value(doc):
+        """Sort helper: return created_at timestamp for stable ordering."""
         value = doc.to_dict().get("created_at")
         if isinstance(value, datetime):
             return value
@@ -148,6 +155,7 @@ def list_ticket_history(current_user=Depends(get_current_user)):
 
 @router.post("", response_model=TicketResponse)
 def create_ticket(payload: TicketUserCreate, current_user=Depends(get_current_user)):
+    """Create a new travel request using the current user's saved profile fields."""
     uid = current_user["uid"]
     user_profile = ensure_user_role(uid)
 
@@ -220,6 +228,7 @@ def create_ticket(payload: TicketUserCreate, current_user=Depends(get_current_us
 
 @router.post("/accommodation", response_model=TicketResponse)
 def create_travel_accommodation(payload: TicketCreate, current_user=Depends(get_current_user)):
+    """Office-side endpoint to create a travel request on behalf of a user."""
     uid = current_user["uid"]
     ensure_role(uid, ("office_coordinator", "superadmin"))
 
@@ -264,6 +273,7 @@ def create_travel_accommodation(payload: TicketCreate, current_user=Depends(get_
 
 @router.patch("/{ticket_id}/status", response_model=TicketResponse)
 def update_ticket_status(ticket_id: str, payload: TicketStatusUpdate, current_user=Depends(get_current_user)):
+    """Approve or reject a ticket request and notify the requester if linked."""
     uid = current_user["uid"]
     ensure_role(uid, ("office_coordinator", "superadmin"))
 
@@ -305,6 +315,7 @@ def update_ticket_status(ticket_id: str, payload: TicketStatusUpdate, current_us
 
 @router.patch("/{ticket_id}", response_model=TicketResponse)
 def update_ticket(ticket_id: str, payload: TicketUserCreate, current_user=Depends(get_current_user)):
+    """Allow a user to edit their own pending travel request."""
     uid = current_user["uid"]
     ensure_user_role(uid)
 
@@ -348,6 +359,7 @@ def update_ticket(ticket_id: str, payload: TicketUserCreate, current_user=Depend
 
 @router.patch("/{ticket_id}/cancel", response_model=TicketResponse)
 def cancel_ticket(ticket_id: str, current_user=Depends(get_current_user)):
+    """Allow a user to cancel their own pending travel request."""
     uid = current_user["uid"]
     ensure_user_role(uid)
 
@@ -387,6 +399,7 @@ def cancel_ticket(ticket_id: str, current_user=Depends(get_current_user)):
 
 @router.get("/my", response_model=list[TicketResponse])
 def list_my_tickets(current_user=Depends(get_current_user)):
+    """List travel requests created by the current user (newest first)."""
     uid = current_user["uid"]
     ensure_user_role(uid)
 
@@ -394,6 +407,7 @@ def list_my_tickets(current_user=Depends(get_current_user)):
     snapshots = list(query.stream())
 
     def created_at_value(doc):
+        """Sort helper: return created_at timestamp for stable ordering."""
         value = doc.to_dict().get("created_at")
         if isinstance(value, datetime):
             return value
@@ -406,6 +420,7 @@ def list_my_tickets(current_user=Depends(get_current_user)):
 
 @router.get("/stats")
 def ticket_stats(current_user=Depends(get_current_user)):
+    """Return simple ticket counts grouped by status for office dashboards."""
     uid = current_user["uid"]
     ensure_role(uid, ("office_coordinator", "superadmin"))
 

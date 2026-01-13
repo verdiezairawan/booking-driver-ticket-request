@@ -15,6 +15,7 @@ const menuItems = [
   { label: 'Manage User', icon: 'bi-people' },
 ]
 
+// Pending driver bookings for office coordinators (approve/reject/assign).
 function OfficeDriverRequests() {
   const navigate = useNavigate()
   const { collapsed: isSidebarCollapsed, toggle: toggleSidebar } = useOfficeSidebar()
@@ -42,13 +43,16 @@ function OfficeDriverRequests() {
   const currentPage = Math.min(page, totalPages)
   const pagedBookings = bookings.slice((currentPage - 1) * pageSize, currentPage * pageSize)
 
+  // Keep page index within bounds when the list size changes.
   useEffect(() => {
     setPage((prev) => Math.min(prev, totalPages))
   }, [totalPages])
 
+  // Load profile for the greeting header.
   useEffect(() => {
     const token = localStorage.getItem('authToken')
     if (!token) return
+    // Fetch current user details from the API.
     const loadProfile = async () => {
       try {
         const res = await fetch(`${API_BASE_URL}/users/me`, {
@@ -65,10 +69,12 @@ function OfficeDriverRequests() {
     loadProfile()
   }, [])
 
+  // Load selectable drivers for assignment.
   useEffect(() => {
     const token = localStorage.getItem('authToken')
     if (!token) return
 
+    // Fetch drivers from the user list endpoint.
     const loadDrivers = async () => {
       setDriversLoading(true)
       setDriversError('')
@@ -104,6 +110,7 @@ function OfficeDriverRequests() {
     loadDrivers()
   }, [])
 
+  // Load all pending driver bookings.
   useEffect(() => {
     const token = localStorage.getItem('authToken')
     if (!token) {
@@ -112,6 +119,7 @@ function OfficeDriverRequests() {
       return
     }
 
+    // Fetch pending bookings from the API.
     const loadBookings = async () => {
       setLoading(true)
       setError('')
@@ -144,6 +152,7 @@ function OfficeDriverRequests() {
     loadBookings()
   }, [])
 
+  // Fetch driver ids that are unavailable for the booking departure time.
   const loadUnavailableDrivers = async (booking) => {
     availabilityRequestIdRef.current += 1
     const requestId = availabilityRequestIdRef.current
@@ -211,6 +220,7 @@ function OfficeDriverRequests() {
     }
   }
 
+  // Filter driver list to those not marked as unavailable.
   const availableDrivers = useMemo(() => {
     if (!drivers.length) return []
     if (!unavailableDriverIds.length) return drivers
@@ -218,6 +228,7 @@ function OfficeDriverRequests() {
     return drivers.filter((driver) => !unavailable.has(driver.uid))
   }, [drivers, unavailableDriverIds])
 
+  // Clear selection if it becomes unavailable after a refresh.
   useEffect(() => {
     if (!selectedDriverId) return
     if (unavailableDriverIds.includes(selectedDriverId)) {
@@ -225,6 +236,7 @@ function OfficeDriverRequests() {
     }
   }, [selectedDriverId, unavailableDriverIds])
 
+  // Open the assign modal and run availability check for the selected booking.
   const openAssignModal = (booking) => {
     setAssignTarget(booking)
     setSelectedDriverId('')
@@ -236,6 +248,7 @@ function OfficeDriverRequests() {
     loadUnavailableDrivers(booking)
   }
 
+  // Close and reset the assign modal state.
   const closeAssignModal = () => {
     availabilityRequestIdRef.current += 1
     setAssignModalOpen(false)
@@ -246,6 +259,7 @@ function OfficeDriverRequests() {
     setAvailabilityLoading(false)
   }
 
+  // Approve the booking and attach the selected driver.
   const handleAssign = async () => {
     if (!assignTarget?.id) return
     if (!selectedDriverId) {
@@ -300,6 +314,7 @@ function OfficeDriverRequests() {
     }
   }
 
+  // Reject a booking request.
   const handleReject = async (bookingId) => {
     const token = localStorage.getItem('authToken')
     if (!token) {
@@ -346,12 +361,14 @@ function OfficeDriverRequests() {
     }
   }
 
+  // Format a date-only display value.
   const formatDate = (value) => {
     if (!value) return '-'
     const dt = new Date(value)
     return Number.isNaN(dt.getTime()) ? '-' : dt.toLocaleDateString('en-GB')
   }
 
+  // Format a time-only display value.
   const formatTime = (value) => {
     if (!value) return '-'
     const dt = new Date(value)
@@ -363,6 +380,7 @@ function OfficeDriverRequests() {
     })
   }
 
+  // Format trip type values into user-facing labels.
   const formatTripType = (value) => {
     if (!value) return '-'
     if (value === 'antar') return 'Drop-off'
@@ -371,6 +389,7 @@ function OfficeDriverRequests() {
     return value
   }
 
+  // Handle sidebar navigation clicks.
   const handleNavigate = (item) => {
     if (item === 'Dashboard') navigate('/office/home')
     if (item === 'Travel Requests') navigate('/office/ticket-requests')

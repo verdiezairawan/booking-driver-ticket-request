@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import MainLayout from '../components/MainLayout'
 import { API_BASE_URL } from '../config'
 
+// List the signed-in user's travel requests and their statuses.
 function TicketHistory() {
   const navigate = useNavigate()
   const [tickets, setTickets] = useState([])
@@ -15,6 +16,7 @@ function TicketHistory() {
 
   const pageSize = 10
 
+  // Convert Firestore timestamps/ISO strings into a Date instance.
   const toDate = (value) => {
     if (!value) return null
     if (value?.seconds) {
@@ -24,6 +26,7 @@ function TicketHistory() {
     return Number.isNaN(parsed.getTime()) ? null : parsed
   }
 
+  // Provide a stable sort value per table column.
   const getTicketSortValue = (ticket, key) => {
     if (!ticket) return ''
     switch (key) {
@@ -83,6 +86,7 @@ function TicketHistory() {
     }
   }
 
+  // Compare values while keeping empty values at the bottom.
   const compareValues = (aValue, bValue) => {
     const aEmpty = aValue === null || aValue === undefined || aValue === ''
     const bEmpty = bValue === null || bValue === undefined || bValue === ''
@@ -101,6 +105,7 @@ function TicketHistory() {
     })
   }
 
+  // Sort tickets based on the active column/direction.
   const sortedTickets = useMemo(() => {
     if (!sortConfig.key) return tickets
 
@@ -124,11 +129,14 @@ function TicketHistory() {
   const currentPage = Math.min(page, totalPages)
   const pagedTickets = sortedTickets.slice((currentPage - 1) * pageSize, currentPage * pageSize)
 
+  // Keep page index within bounds when the list size changes.
   useEffect(() => {
     setPage((prev) => Math.min(prev, totalPages))
   }, [totalPages])
 
+  // Load the current user's ticket history.
   useEffect(() => {
+    // Fetch ticket data from the API.
     const fetchTickets = async () => {
       setLoading(true)
       setError('')
@@ -173,10 +181,12 @@ function TicketHistory() {
     fetchTickets()
   }, [])
 
+  // Open the ticket form with the selected ticket for editing.
   const handleEdit = (ticket) => {
     navigate('/user/ticket-request', { state: { ticket } })
   }
 
+  // Cancel a ticket request (when allowed by status).
   const handleCancel = async (ticketId) => {
     const confirmed = window.confirm('Cancel this ticket request?')
     if (!confirmed) return
@@ -218,6 +228,7 @@ function TicketHistory() {
     }
   }
 
+  // Toggle sort direction for a column (or activate a new sort key).
   const toggleSort = (key) => {
     setPage(1)
     setSortConfig((prev) => {
@@ -228,6 +239,7 @@ function TicketHistory() {
     })
   }
 
+  // Render the sort icon for the table header.
   const renderSortIcon = (key) => {
     const isActive = sortConfig.key === key
     if (!isActive) {
@@ -241,12 +253,14 @@ function TicketHistory() {
     )
   }
 
+  // Format a date-only value for table display.
   const formatDate = (value) => {
     const date = toDate(value)
     if (!date) return '-'
     return date.toLocaleDateString('en-GB')
   }
 
+  // Merge date and time fields into a single display string.
   const formatDateTime = (dateValue, timeValue) => {
     const date = toDate(dateValue)
     if (!date) return '-'
@@ -257,6 +271,7 @@ function TicketHistory() {
     return base
   }
 
+  // Format boolean-ish values consistently.
   const formatBool = (value) => {
     if (value === true) return 'Yes'
     if (value === false) return 'No'

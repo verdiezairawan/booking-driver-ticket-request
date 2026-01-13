@@ -7,17 +7,21 @@ from firebase_admin import credentials, firestore
 
 class FirestoreClientProxy:
     def __init__(self) -> None:
+        """Create an uninitialized Firestore client proxy."""
         self._client = None
 
     def set_client(self, client) -> None:
+        """Attach the underlying Firestore client instance."""
         self._client = client
 
     def get_client(self):
+        """Return the Firestore client, raising if Firebase isn't initialized yet."""
         if self._client is None:
             raise RuntimeError("Firestore client not initialized. Ensure Firebase Admin is initialized on startup.")
         return self._client
 
     def __getattr__(self, name: str):
+        """Proxy unknown attributes to the underlying Firestore client."""
         return getattr(self.get_client(), name)
 
 
@@ -25,6 +29,7 @@ db = FirestoreClientProxy()
 
 
 def init_firebase_admin() -> None:
+    """Initialize Firebase Admin + Firestore client once per process."""
     if firebase_admin._apps:
         if db._client is None:
             db.set_client(firestore.client())
@@ -66,5 +71,6 @@ def init_firebase_admin() -> None:
 
 
 def get_db():
+    """Return an initialized Firestore client (initializes lazily if needed)."""
     init_firebase_admin()
     return db.get_client()

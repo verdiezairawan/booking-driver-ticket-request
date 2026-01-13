@@ -78,6 +78,7 @@ class BookingComplete(BaseModel):
 
 
 def serialize_booking(doc_snapshot) -> BookingResponse:
+    """Convert a Firestore booking document into the API response model."""
     data = doc_snapshot.to_dict() or {}
     return BookingResponse(
         id=doc_snapshot.id,
@@ -105,6 +106,7 @@ def serialize_booking(doc_snapshot) -> BookingResponse:
 
 
 def ensure_role(uid: str, allowed: tuple[str, ...]):
+    """Ensure the user has one of the allowed roles and return the resolved role."""
     doc = db.collection("users").document(uid).get()
     if not doc.exists:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User profile not found")
@@ -115,6 +117,7 @@ def ensure_role(uid: str, allowed: tuple[str, ...]):
 
 
 def get_departure_time_epoch_ms(value: Optional[datetime]) -> Optional[int]:
+    """Return the departure timestamp as epoch ms (normalized to UTC when naive)."""
     if not isinstance(value, datetime):
         return None
 
@@ -125,6 +128,7 @@ def get_departure_time_epoch_ms(value: Optional[datetime]) -> Optional[int]:
 
 
 def is_driver_busy(driver_id: str, departure_time: Optional[datetime], exclude_booking_id: Optional[str] = None) -> bool:
+    """Check if a driver already has an approved/in-progress booking at the same departure time."""
     if not driver_id or not isinstance(departure_time, datetime):
         return False
 
@@ -150,6 +154,7 @@ def is_driver_busy(driver_id: str, departure_time: Optional[datetime], exclude_b
 
 @router.post("", response_model=BookingResponse)
 def create_booking(payload: BookingCreate, current_user=Depends(get_current_user)):
+    """Create a booking request for the current user (status starts as pending)."""
     uid = current_user["uid"]
     ensure_role(uid, ("user",))
 
@@ -215,6 +220,7 @@ def create_booking(payload: BookingCreate, current_user=Depends(get_current_user
 
 @router.post("/assign", response_model=BookingOfficeHistoryResponse)
 def assign_driver(payload: BookingAssignCreate, current_user=Depends(get_current_user)):
+    """Create an approved booking directly and assign it to a specific driver (office flow)."""
     uid = current_user["uid"]
     ensure_role(uid, ("office_coordinator", "superadmin"))
 
@@ -296,6 +302,7 @@ def assign_driver(payload: BookingAssignCreate, current_user=Depends(get_current
 
 @router.get("/my", response_model=list[BookingResponse])
 def list_my_bookings(current_user=Depends(get_current_user)):
+    """List bookings created by the current user (newest first)."""
     uid = current_user["uid"]
     ensure_role(uid, ("user",))
 
@@ -303,6 +310,7 @@ def list_my_bookings(current_user=Depends(get_current_user)):
     snapshots = list(query.stream())
 
     def created_at_value(doc):
+        """Sort helper: return created_at timestamp for stable ordering."""
         value = doc.to_dict().get("created_at")
         if isinstance(value, datetime):
             return value
@@ -314,6 +322,7 @@ def list_my_bookings(current_user=Depends(get_current_user)):
 
 @router.get("/pending", response_model=list[BookingResponse])
 def list_pending_bookings(current_user=Depends(get_current_user)):
+    """List pending booking requests for office coordinators and superadmins."""
     uid = current_user["uid"]
     ensure_role(uid, ("office_coordinator", "superadmin"))
 
@@ -321,6 +330,7 @@ def list_pending_bookings(current_user=Depends(get_current_user)):
     snapshots = list(query.stream())
 
     def created_at_value(doc):
+        """Sort helper: return created_at timestamp for stable ordering."""
         value = doc.to_dict().get("created_at")
         if isinstance(value, datetime):
             return value
@@ -332,6 +342,7 @@ def list_pending_bookings(current_user=Depends(get_current_user)):
 
 @router.get("/unavailable-drivers", response_model=list[str])
 def list_unavailable_drivers(departure_time: datetime, current_user=Depends(get_current_user)):
+    """Return a list of driver ids that already have a booking at the given departure time."""
     uid = current_user["uid"]
     ensure_role(uid, ("office_coordinator", "superadmin"))
 
@@ -362,6 +373,7 @@ def update_booking_status(
     payload: BookingStatusUpdate,
     current_user=Depends(get_current_user),
 ):
+    """Update a booking's status (office flow), including driver assignment for approvals."""
     uid = current_user["uid"]
     ensure_role(uid, ("office_coordinator", "superadmin"))
 
@@ -432,6 +444,7 @@ def update_booking_status(
 
 @router.patch("/{booking_id}", response_model=BookingResponse)
 def update_booking(booking_id: str, payload: BookingCreate, current_user=Depends(get_current_user)):
+    """Allow a user to edit their own pending booking request."""
     uid = current_user["uid"]
     ensure_role(uid, ("user",))
 
@@ -474,6 +487,7 @@ def update_booking(booking_id: str, payload: BookingCreate, current_user=Depends
 
 @router.patch("/{booking_id}/cancel", response_model=BookingResponse)
 def cancel_booking(booking_id: str, current_user=Depends(get_current_user)):
+    """Cancel a booking with role-based rules (user: pending only, office: approved before start)."""
     uid = current_user["uid"]
     role = ensure_role(uid, ("user", "office_coordinator", "superadmin"))
 
@@ -537,6 +551,7 @@ def cancel_booking(booking_id: str, current_user=Depends(get_current_user)):
 
 @router.patch("/{booking_id}/start", response_model=BookingResponse)
 def start_booking(booking_id: str, payload: BookingStart, current_user=Depends(get_current_user)):
+    """Driver action: mark a booking as started and store the starting mileage."""
     uid = current_user["uid"]
     ensure_role(uid, ("driver",))
 
@@ -570,6 +585,7 @@ def start_booking(booking_id: str, payload: BookingStart, current_user=Depends(g
 
 @router.patch("/{booking_id}/complete", response_model=BookingResponse)
 def complete_booking(booking_id: str, payload: BookingComplete, current_user=Depends(get_current_user)):
+    """Driver action: mark a booking as completed with ending mileage and completion proof."""
     uid = current_user["uid"]
     ensure_role(uid, ("driver",))
 
@@ -611,6 +627,7 @@ def complete_booking(booking_id: str, payload: BookingComplete, current_user=Dep
 
 @router.get("/assigned", response_model=list[BookingResponse])
 def list_assigned_bookings(current_user=Depends(get_current_user)):
+    """List bookings assigned to the current driver."""
     uid = current_user["uid"]
     ensure_role(uid, ("driver",))
 
@@ -620,12 +637,14 @@ def list_assigned_bookings(current_user=Depends(get_current_user)):
 
 @router.get("/history", response_model=list[BookingOfficeHistoryResponse])
 def list_booking_history(current_user=Depends(get_current_user)):
+    """List non-pending bookings for office history view (with driver name resolved)."""
     uid = current_user["uid"]
     ensure_role(uid, ("office_coordinator", "superadmin"))
 
     snapshots = list(db.collection("bookings").stream())
 
     def created_at_value(doc):
+        """Sort helper: return created_at timestamp for stable ordering."""
         value = doc.to_dict().get("created_at")
         if isinstance(value, datetime):
             return value
@@ -642,6 +661,7 @@ def list_booking_history(current_user=Depends(get_current_user)):
     driver_name_cache: dict[str, Optional[str]] = {}
 
     def resolve_driver_name(driver_id: Optional[str]) -> Optional[str]:
+        """Resolve driver display name with a small in-request cache."""
         if not driver_id:
             return None
         if driver_id in driver_name_cache:
@@ -668,10 +688,12 @@ def list_booking_history(current_user=Depends(get_current_user)):
 
 @router.get("/stats")
 def booking_stats(current_user=Depends(get_current_user)):
+    """Return simple booking counts grouped by status for office dashboards."""
     uid = current_user["uid"]
     ensure_role(uid, ("office_coordinator", "superadmin"))
 
     def count_status(status_value: str) -> int:
+        """Count bookings for a specific status (Firestore query)."""
         query = db.collection("bookings").where("status", "==", status_value).stream()
         return len(list(query))
 

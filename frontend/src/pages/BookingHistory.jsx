@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import MainLayout from '../components/MainLayout'
 import { API_BASE_URL } from '../config'
 
+// List the signed-in user's driver bookings and their statuses.
 function BookingHistory() {
   const navigate = useNavigate()
   const [bookings, setBookings] = useState([])
@@ -15,6 +16,7 @@ function BookingHistory() {
 
   const pageSize = 10
 
+  // Convert Firestore timestamps/ISO strings into a Date instance.
   const toDate = (value) => {
     if (!value) return null
     if (value?.seconds) return new Date(value.seconds * 1000)
@@ -22,6 +24,7 @@ function BookingHistory() {
     return Number.isNaN(parsed.getTime()) ? null : parsed
   }
 
+  // Normalize booking status for UI (approved + started => in_progress).
   const getBookingStatus = (booking) => {
     const raw = String(booking?.status || 'pending').toLowerCase()
     if (raw === 'approved') {
@@ -31,11 +34,13 @@ function BookingHistory() {
     return raw
   }
 
+  // Format status strings for display.
   const formatStatusText = (value) => {
     if (!value) return '-'
     return String(value).replace(/_/g, ' ')
   }
 
+  // Provide a stable sort value per table column.
   const getBookingSortValue = (booking, key) => {
     if (!booking) return ''
     switch (key) {
@@ -71,6 +76,7 @@ function BookingHistory() {
     }
   }
 
+  // Compare values while keeping empty values at the bottom.
   const compareValues = (aValue, bValue) => {
     const aEmpty = aValue === null || aValue === undefined || aValue === ''
     const bEmpty = bValue === null || bValue === undefined || bValue === ''
@@ -89,6 +95,7 @@ function BookingHistory() {
     })
   }
 
+  // Sort bookings based on the active column/direction.
   const sortedBookings = useMemo(() => {
     if (!sortConfig.key) return bookings
 
@@ -112,11 +119,14 @@ function BookingHistory() {
   const currentPage = Math.min(page, totalPages)
   const pagedBookings = sortedBookings.slice((currentPage - 1) * pageSize, currentPage * pageSize)
 
+  // Keep page index within bounds when the list size changes.
   useEffect(() => {
     setPage((prev) => Math.min(prev, totalPages))
   }, [totalPages])
 
+  // Load the current user's booking history.
   useEffect(() => {
+    // Fetch bookings data from the API.
     const fetchBookings = async () => {
       setLoading(true)
       setError('')
@@ -158,10 +168,12 @@ function BookingHistory() {
     fetchBookings()
   }, [])
 
+  // Open the booking form with an existing booking for editing.
   const handleEdit = (booking) => {
     navigate('/user/booking-driver', { state: { booking } })
   }
 
+  // Cancel a booking request (when allowed by status).
   const handleCancel = async (bookingId) => {
     const confirmed = window.confirm('Cancel this driver booking request?')
     if (!confirmed) return
@@ -203,6 +215,7 @@ function BookingHistory() {
     }
   }
 
+  // Toggle sort direction for a column (or activate a new sort key).
   const toggleSort = (key) => {
     setPage(1)
     setSortConfig((prev) => {
@@ -213,6 +226,7 @@ function BookingHistory() {
     })
   }
 
+  // Render the sort icon for the table header.
   const renderSortIcon = (key) => {
     const isActive = sortConfig.key === key
     if (!isActive) {
@@ -226,6 +240,7 @@ function BookingHistory() {
     )
   }
 
+  // Format the trip type values into labels users understand.
   const formatTripType = (value) => {
     if (!value) return '-'
     if (value === 'antar') return 'Drop-off'
@@ -234,6 +249,7 @@ function BookingHistory() {
     return value
   }
 
+  // Format a date+time field for table display.
   const formatDateTime = (value) => {
     const date = toDate(value)
     if (!date) return '-'
@@ -244,6 +260,7 @@ function BookingHistory() {
     })}`
   }
 
+  // Format a date-only field for table display.
   const formatDateOnly = (value) => {
     const date = toDate(value)
     if (!date) return '-'

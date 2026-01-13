@@ -25,6 +25,7 @@ const initialCreate = {
   password: '',
 }
 
+// User management page for office coordinators.
 function OfficeManageUser() {
   const navigate = useNavigate()
   const { collapsed: isSidebarCollapsed, toggle: toggleSidebar } = useOfficeSidebar()
@@ -65,12 +66,14 @@ function OfficeManageUser() {
   const currentPage = Math.min(page, totalPages)
   const pagedUsers = users.slice((currentPage - 1) * pageSize, currentPage * pageSize)
 
+  // Keep page index within bounds when the list size changes.
   useEffect(() => {
     setPage((prev) => Math.min(prev, totalPages))
   }, [totalPages])
 
   const token = localStorage.getItem('authToken')
 
+  // Handle sidebar navigation clicks.
   const handleNavigate = (item) => {
     if (item === 'Dashboard') navigate('/office/home')
     if (item === 'Travel Requests') navigate('/office/ticket-requests')
@@ -82,6 +85,7 @@ function OfficeManageUser() {
     if (item === 'Manage User') navigate('/office/manage-user')
   }
 
+  // Fetch user profiles from the API.
   const loadUsers = async () => {
     if (!token) {
       setLoading(false)
@@ -117,19 +121,23 @@ function OfficeManageUser() {
     }
   }
 
+  // Initial data fetch.
   useEffect(() => {
     loadUsers()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // Update create form fields.
   const handleCreateChange = (field) => (event) => {
     setCreateForm((prev) => ({ ...prev, [field]: event.target.value }))
   }
 
+  // Update edit form fields.
   const handleEditChange = (field) => (event) => {
     setEditForm((prev) => ({ ...prev, [field]: event.target.value }))
   }
 
+  // Open the import modal and reset state.
   const openImportModal = () => {
     setImportModalOpen(true)
     setImportFile(null)
@@ -139,12 +147,14 @@ function OfficeManageUser() {
     setImportUpdateExisting(true)
   }
 
+  // Close the import modal unless an import is in progress.
   const closeImportModal = () => {
     if (importLoading) return
     setImportModalOpen(false)
     setImportError('')
   }
 
+  // Store the selected import file and clear errors/result.
   const handleImportFileChange = (event) => {
     const file = event.target.files?.[0] ?? null
     setImportFile(file)
@@ -152,6 +162,7 @@ function OfficeManageUser() {
     setImportResult(null)
   }
 
+  // Read a file into base64 for API upload.
   const readFileAsBase64 = (file) =>
     new Promise((resolve, reject) => {
       const reader = new FileReader()
@@ -164,6 +175,7 @@ function OfficeManageUser() {
       reader.readAsDataURL(file)
     })
 
+  // Download the server-provided import template (.xlsx).
   const downloadImportTemplate = async () => {
     setImportError('')
     try {
@@ -192,6 +204,7 @@ function OfficeManageUser() {
     }
   }
 
+  // Upload and import users from the selected CSV/XLSX file.
   const handleImportUsers = async () => {
     if (!token) {
       setImportError('Authentication token not found.')
@@ -244,6 +257,7 @@ function OfficeManageUser() {
     }
   }
 
+  // Select a user and populate the edit form.
   const handleSelectUser = (user) => {
     setSelectedUser(user)
     setEditForm({
@@ -257,6 +271,7 @@ function OfficeManageUser() {
     setEditError('')
   }
 
+  // Create a new user (auth + profile) from the create form.
   const handleCreate = async (event) => {
     event.preventDefault()
     if (!token) return
@@ -300,6 +315,7 @@ function OfficeManageUser() {
     }
   }
 
+  // Save changes for the selected user.
   const handleUpdate = async (event) => {
     event.preventDefault()
     if (!token || !selectedUser) return
@@ -346,6 +362,7 @@ function OfficeManageUser() {
     }
   }
 
+  // Deactivate an account (disable in auth + profile).
   const handleDeactivate = async (user) => {
     if (!token || !user?.uid) return
 
@@ -383,6 +400,7 @@ function OfficeManageUser() {
     }
   }
 
+  // Open the password reset modal for a user.
   const openPasswordModal = (user) => {
     setPasswordModalUser(user)
     setPasswordForm({ password: '', confirm: '' })
@@ -391,6 +409,7 @@ function OfficeManageUser() {
     setActionError('')
   }
 
+  // Close the password modal unless a reset is in progress.
   const closePasswordModal = () => {
     if (passwordLoading) return
     setPasswordModalUser(null)
@@ -398,11 +417,13 @@ function OfficeManageUser() {
     setPasswordError('')
   }
 
+  // Update password form fields.
   const handlePasswordChange = (field) => (event) => {
     const value = event.target.value
     setPasswordForm((prev) => ({ ...prev, [field]: value }))
   }
 
+  // Reset a user's password via the API.
   const handleResetPassword = async (event) => {
     event.preventDefault()
     if (!token || !passwordModalUser?.uid) return

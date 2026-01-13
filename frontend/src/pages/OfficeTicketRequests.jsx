@@ -15,6 +15,7 @@ const menuItems = [
   { label: 'Manage User', icon: 'bi-people' },
 ]
 
+// Pending travel requests for office coordinators (approve/reject).
 function OfficeTicketRequests() {
   const navigate = useNavigate()
   const { collapsed: isSidebarCollapsed, toggle: toggleSidebar } = useOfficeSidebar()
@@ -31,10 +32,12 @@ function OfficeTicketRequests() {
   const currentPage = Math.min(page, totalPages)
   const pagedTickets = tickets.slice((currentPage - 1) * pageSize, currentPage * pageSize)
 
+  // Keep page index within bounds when the list size changes.
   useEffect(() => {
     setPage((prev) => Math.min(prev, totalPages))
   }, [totalPages])
 
+  // Load pending ticket requests.
   useEffect(() => {
     const token = localStorage.getItem('authToken')
     if (!token) {
@@ -43,6 +46,7 @@ function OfficeTicketRequests() {
       return
     }
 
+    // Fetch pending tickets from the API.
     const loadTickets = async () => {
       setLoading(true)
       setError('')
@@ -75,6 +79,7 @@ function OfficeTicketRequests() {
     loadTickets()
   }, [])
 
+  // Update ticket status and remove it from the pending list.
   const handleStatusUpdate = async (ticketId, nextStatus) => {
     const token = localStorage.getItem('authToken')
     if (!token) {
@@ -121,12 +126,14 @@ function OfficeTicketRequests() {
     }
   }
 
+  // Format a date-only display value.
   const formatDate = (value) => {
     if (!value) return '-'
     const dt = new Date(value)
     return Number.isNaN(dt.getTime()) ? '-' : dt.toLocaleDateString('en-GB')
   }
 
+  // Handle sidebar navigation clicks.
   const handleNavigate = (item) => {
     if (item === 'Dashboard') navigate('/office/home')
     if (item === 'Travel Requests') navigate('/office/ticket-requests')

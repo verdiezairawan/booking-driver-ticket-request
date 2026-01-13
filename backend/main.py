@@ -28,12 +28,14 @@ security = HTTPBearer()
 
 @app.on_event("startup")
 def startup_event():
+    """Initialize Firebase Admin SDK once the app starts."""
     init_firebase_admin()
 
 
 def get_current_user(
     creds: HTTPAuthorizationCredentials = Depends(security),
 ):
+    """Validate the auth token and return the decoded Firebase user payload."""
     token = creds.credentials
     try:
         decoded = firebase_auth.verify_id_token(token, clock_skew_seconds=60)
@@ -54,16 +56,19 @@ from routes_users_admin import router as users_router
 
 @app.get("/health")
 def health_check():
+    """Basic health check for load balancers/uptime monitors."""
     return {"status": "ok"}
 
 
 @app.get("/healthz")
 def healthz_check():
+    """Kubernetes-style health endpoint (alias of /health)."""
     return {"status": "ok"}
 
 
 @app.get("/users/me")
 def get_me(current_user=Depends(get_current_user)):
+    """Return the current user's profile summary used by the frontend."""
     uid = current_user["uid"]
     doc = db.collection("users").document(uid).get()
     if not doc.exists:

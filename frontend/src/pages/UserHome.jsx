@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import MainLayout from '../components/MainLayout'
 import { API_BASE_URL } from '../config'
 
+// User dashboard landing page.
 function UserHome() {
   const navigate = useNavigate()
   const [profile, setProfile] = useState({ name: '' })
@@ -13,6 +14,7 @@ function UserHome() {
     bookingActive: 0,
   })
 
+  // Load profile header and high-level ticket/booking stats.
   useEffect(() => {
     const token = localStorage.getItem('authToken')
     if (!token) {
@@ -20,6 +22,7 @@ function UserHome() {
       return
     }
 
+    // Fetch the user's profile for the greeting.
     const fetchProfile = async () => {
       try {
         const response = await fetch(`${API_BASE_URL}/users/me`, { headers: { Authorization: `Bearer ${token}` } })
@@ -34,6 +37,7 @@ function UserHome() {
       }
     }
 
+    // Fetch tickets and bookings to compute quick stats.
     const fetchStats = async () => {
       try {
         const [ticketsRes, bookingsRes] = await Promise.all([
@@ -70,22 +74,27 @@ function UserHome() {
     fetchStats()
   }, [])
 
+  // Navigate to the travel request form.
   const handleTicketRequest = () => {
     navigate('/user/ticket-request')
   }
 
+  // Navigate to travel history/status.
   const handleTicketHistory = () => {
     navigate('/user/ticket-history')
   }
 
+  // Navigate to the driver booking form.
   const handleBookingDriver = () => {
     navigate('/user/booking-driver')
   }
 
+  // Navigate to driver booking history/status.
   const handleBookingHistory = () => {
     navigate('/user/booking-history')
   }
 
+  // Enable keyboard activation on clickable cards.
   const handleCardKeyDown = (event, action) => {
     if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault()

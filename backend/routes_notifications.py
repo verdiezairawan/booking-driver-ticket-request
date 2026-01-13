@@ -28,6 +28,7 @@ class MarkAllReadResponse(BaseModel):
 
 
 def serialize_notification(doc_snapshot) -> NotificationResponse:
+    """Map a Firestore notification document into the response model."""
     data = doc_snapshot.to_dict() or {}
     return NotificationResponse(
         id=doc_snapshot.id,
@@ -44,6 +45,7 @@ def serialize_notification(doc_snapshot) -> NotificationResponse:
 
 @router.get("/my", response_model=list[NotificationResponse])
 def list_my_notifications(limit: int = 25, current_user=Depends(get_current_user)):
+    """Return recent notifications for the current user (newest first)."""
     uid = current_user["uid"]
     if limit < 1:
         limit = 1
@@ -54,6 +56,7 @@ def list_my_notifications(limit: int = 25, current_user=Depends(get_current_user
     snapshots = list(collection_ref.stream())
 
     def created_at_value(doc):
+        """Sort helper: pull created_at timestamp for stable ordering."""
         value = doc.to_dict().get("created_at")
         if isinstance(value, datetime):
             return value
@@ -65,6 +68,7 @@ def list_my_notifications(limit: int = 25, current_user=Depends(get_current_user
 
 @router.patch("/mark-all-read", response_model=MarkAllReadResponse)
 def mark_all_notifications_read(current_user=Depends(get_current_user)):
+    """Mark every unread notification as read for the current user."""
     uid = current_user["uid"]
 
     collection_ref = db.collection("users").document(uid).collection("notifications")
@@ -83,6 +87,7 @@ def mark_all_notifications_read(current_user=Depends(get_current_user)):
 
 @router.patch("/{notification_id}/read", response_model=NotificationResponse)
 def mark_notification_read(notification_id: str, current_user=Depends(get_current_user)):
+    """Mark a single notification as read for the current user."""
     uid = current_user["uid"]
     doc_ref = db.collection("users").document(uid).collection("notifications").document(notification_id)
     snapshot = doc_ref.get()
@@ -92,4 +97,3 @@ def mark_notification_read(notification_id: str, current_user=Depends(get_curren
     doc_ref.update({"read": True, "read_at": firestore.SERVER_TIMESTAMP})
     updated_snapshot = doc_ref.get()
     return serialize_notification(updated_snapshot)
-

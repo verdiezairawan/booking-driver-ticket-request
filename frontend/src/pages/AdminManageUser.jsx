@@ -16,6 +16,7 @@ const initialCreate = {
   password: '',
 }
 
+// User management page for superadmins (includes delete + broader role control).
 function AdminManageUser() {
   const navigate = useNavigate()
   const { collapsed: isSidebarCollapsed, toggle: toggleSidebar } = useOfficeSidebar()
@@ -58,16 +59,19 @@ function AdminManageUser() {
   const currentPage = Math.min(page, totalPages)
   const pagedUsers = users.slice((currentPage - 1) * pageSize, currentPage * pageSize)
 
+  // Keep page index within bounds when the list size changes.
   useEffect(() => {
     setPage((prev) => Math.min(prev, totalPages))
   }, [totalPages])
 
   const token = localStorage.getItem('authToken')
 
+  // Navigate back to the manage-user page entry.
   const handleNavigate = () => {
     navigate('/admin/manage-user')
   }
 
+  // Load current user details (used to prevent self-delete in UI).
   const loadMe = async () => {
     if (!token) return
 
@@ -83,6 +87,7 @@ function AdminManageUser() {
     }
   }
 
+  // Fetch user profiles from the API.
   const loadUsers = async () => {
     if (!token) {
       setLoading(false)
@@ -118,20 +123,24 @@ function AdminManageUser() {
     }
   }
 
+  // Initial data fetch.
   useEffect(() => {
     loadMe()
     loadUsers()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // Update create form fields.
   const handleCreateChange = (field) => (event) => {
     setCreateForm((prev) => ({ ...prev, [field]: event.target.value }))
   }
 
+  // Update edit form fields.
   const handleEditChange = (field) => (event) => {
     setEditForm((prev) => ({ ...prev, [field]: event.target.value }))
   }
 
+  // Open the import modal and reset state.
   const openImportModal = () => {
     setImportModalOpen(true)
     setImportFile(null)
@@ -141,12 +150,14 @@ function AdminManageUser() {
     setImportUpdateExisting(true)
   }
 
+  // Close the import modal unless an import is in progress.
   const closeImportModal = () => {
     if (importLoading) return
     setImportModalOpen(false)
     setImportError('')
   }
 
+  // Store the selected import file and clear errors/result.
   const handleImportFileChange = (event) => {
     const file = event.target.files?.[0] ?? null
     setImportFile(file)
@@ -154,6 +165,7 @@ function AdminManageUser() {
     setImportResult(null)
   }
 
+  // Read a file into base64 for API upload.
   const readFileAsBase64 = (file) =>
     new Promise((resolve, reject) => {
       const reader = new FileReader()
@@ -166,6 +178,7 @@ function AdminManageUser() {
       reader.readAsDataURL(file)
     })
 
+  // Download the server-provided import template (.xlsx).
   const downloadImportTemplate = async () => {
     setImportError('')
     try {
@@ -194,6 +207,7 @@ function AdminManageUser() {
     }
   }
 
+  // Upload and import users from the selected CSV/XLSX file.
   const handleImportUsers = async () => {
     if (!token) {
       setImportError('Authentication token not found.')
@@ -246,6 +260,7 @@ function AdminManageUser() {
     }
   }
 
+  // Select a user and populate the edit form.
   const handleSelectUser = (user) => {
     setSelectedUser(user)
     setEditForm({
@@ -259,6 +274,7 @@ function AdminManageUser() {
     setEditError('')
   }
 
+  // Create a new user (auth + profile) from the create form.
   const handleCreate = async (event) => {
     event.preventDefault()
     if (!token) return
@@ -302,6 +318,7 @@ function AdminManageUser() {
     }
   }
 
+  // Save changes for the selected user.
   const handleUpdate = async (event) => {
     event.preventDefault()
     if (!token || !selectedUser) return
@@ -343,6 +360,7 @@ function AdminManageUser() {
     }
   }
 
+  // Deactivate an account (disable in auth + profile).
   const handleDeactivate = async (user) => {
     if (!token || !user?.uid) return
 
@@ -380,6 +398,7 @@ function AdminManageUser() {
     }
   }
 
+  // Open the password reset modal for a user.
   const openPasswordModal = (user) => {
     setPasswordModalUser(user)
     setPasswordForm({ password: '', confirm: '' })
@@ -388,6 +407,7 @@ function AdminManageUser() {
     setActionError('')
   }
 
+  // Close the password modal unless a reset is in progress.
   const closePasswordModal = () => {
     if (passwordLoading) return
     setPasswordModalUser(null)
@@ -395,11 +415,13 @@ function AdminManageUser() {
     setPasswordError('')
   }
 
+  // Update password form fields.
   const handlePasswordChange = (field) => (event) => {
     const value = event.target.value
     setPasswordForm((prev) => ({ ...prev, [field]: value }))
   }
 
+  // Reset a user's password via the API.
   const handleResetPassword = async (event) => {
     event.preventDefault()
     if (!token || !passwordModalUser?.uid) return
@@ -449,6 +471,7 @@ function AdminManageUser() {
     }
   }
 
+  // Permanently delete a user from Firebase Auth and Firestore.
   const handleDelete = async (user) => {
     if (!token || !user?.uid) return
 

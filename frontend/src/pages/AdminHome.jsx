@@ -24,6 +24,7 @@ const actionConfig = [
   { label: 'Completed Drivers', type: 'bookingCompleted', icon: 'bi-check2-circle' },
 ]
 
+// Superadmin dashboard page.
 function AdminHome() {
   const navigate = useNavigate()
   const { collapsed: isSidebarCollapsed, toggle: toggleSidebar } = useOfficeSidebar()
@@ -38,10 +39,12 @@ function AdminHome() {
     bookingCompleted: 0,
   })
 
+  // Load the user profile and dashboard stats.
   useEffect(() => {
     const token = localStorage.getItem('authToken')
     if (!token) return
 
+    // Fetch profile for the greeting line.
     const loadProfile = async () => {
       try {
         const res = await fetch(`${API_BASE_URL}/users/me`, {
@@ -56,6 +59,7 @@ function AdminHome() {
       }
     }
 
+    // Fetch ticket/booking counts for the stat cards.
     const loadStats = async () => {
       try {
         const [ticketRes, bookingRes] = await Promise.all([
@@ -88,6 +92,7 @@ function AdminHome() {
     loadStats()
   }, [])
 
+  // Handle sidebar navigation clicks.
   const handleNavigate = (item) => {
     if (item === 'Dashboard') navigate('/admin/home')
     if (item === 'Travel Requests') navigate('/office/ticket-requests')
