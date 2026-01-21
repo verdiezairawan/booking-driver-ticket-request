@@ -101,7 +101,7 @@ function AdminHome() {
     if (item === 'Travel Assign') navigate('/office/travel-accommodation')
     if (item === 'Booking Driver Requests') navigate('/office/driver-requests')
     if (item === 'Booking Driver Assign') navigate('/office/assign-drivers')
-    if (item === 'Manage User') navigate('/office/manage-user')
+    if (item === 'Manage User') navigate('/admin/manage-user')
   }
 
   return (

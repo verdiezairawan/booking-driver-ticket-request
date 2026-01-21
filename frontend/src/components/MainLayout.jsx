@@ -139,6 +139,7 @@ function MainLayout({ title, children }) {
   // Sign out and return to the login page.
   const handleLogout = async () => {
     localStorage.removeItem('authToken')
+    localStorage.removeItem('authRole')
 
     try {
       await signOut(auth)

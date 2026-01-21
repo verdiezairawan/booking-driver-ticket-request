@@ -19,6 +19,7 @@ const menuItems = [
 function OfficeTicketHistory() {
   const navigate = useNavigate()
   const { collapsed: isSidebarCollapsed, toggle: toggleSidebar } = useOfficeSidebar()
+  const isSuperadmin = localStorage.getItem('authRole') === 'superadmin'
   const [tickets, setTickets] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -380,14 +381,17 @@ function OfficeTicketHistory() {
 
   // Handle sidebar navigation clicks.
   const handleNavigate = (item) => {
-    if (item === 'Dashboard') navigate('/office/home')
+    const dashboardRoute = isSuperadmin ? '/admin/home' : '/office/home'
+    const manageUserRoute = isSuperadmin ? '/admin/manage-user' : '/office/manage-user'
+
+    if (item === 'Dashboard') navigate(dashboardRoute)
     if (item === 'Travel Requests') navigate('/office/ticket-requests')
     if (item === 'Travel Status & History') navigate('/office/ticket-history')
     if (item === 'Booking Driver Status & History') navigate('/office/driver-history')
     if (item === 'Travel Assign') navigate('/office/travel-accommodation')
     if (item === 'Booking Driver Requests') navigate('/office/driver-requests')
     if (item === 'Booking Driver Assign') navigate('/office/assign-drivers')
-    if (item === 'Manage User') navigate('/office/manage-user')
+    if (item === 'Manage User') navigate(manageUserRoute)
   }
 
   return (
@@ -395,7 +399,7 @@ function OfficeTicketHistory() {
       <div className={`office-dashboard fixed-sidebar ${isSidebarCollapsed ? 'is-collapsed' : ''}`}>
         <aside className="office-sidebar visible">
           <div className="sidebar-header">
-            <span className="sidebar-role">Office Coordinator</span>
+            <span className="sidebar-role">{isSuperadmin ? 'Super Admin' : 'Office Coordinator'}</span>
             <button
               type="button"
               className="sidebar-toggle"

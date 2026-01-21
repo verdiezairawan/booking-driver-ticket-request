@@ -4,7 +4,16 @@ import MainLayout from '../components/MainLayout'
 import useOfficeSidebar from '../hooks/useOfficeSidebar'
 import { API_BASE_URL } from '../config'
 
-const menuItems = [{ label: 'Manage User', icon: 'bi-people' }]
+const menuItems = [
+  { label: 'Dashboard', icon: 'bi-speedometer2' },
+  { label: 'Travel Requests', icon: 'bi-ticket-perforated' },
+  { label: 'Travel Status & History', icon: 'bi-clock-history' },
+  { label: 'Travel Assign', icon: 'bi-building' },
+  { label: 'Booking Driver Requests', icon: 'bi-car-front' },
+  { label: 'Booking Driver Status & History', icon: 'bi-card-list' },
+  { label: 'Booking Driver Assign', icon: 'bi-person-check' },
+  { label: 'Manage User', icon: 'bi-people' },
+]
 
 const initialCreate = {
   name: '',
@@ -66,9 +75,16 @@ function AdminManageUser() {
 
   const token = localStorage.getItem('authToken')
 
-  // Navigate back to the manage-user page entry.
-  const handleNavigate = () => {
-    navigate('/admin/manage-user')
+  // Handle sidebar navigation clicks.
+  const handleNavigate = (item) => {
+    if (item === 'Dashboard') navigate('/admin/home')
+    if (item === 'Travel Requests') navigate('/office/ticket-requests')
+    if (item === 'Travel Status & History') navigate('/office/ticket-history')
+    if (item === 'Booking Driver Status & History') navigate('/office/driver-history')
+    if (item === 'Travel Assign') navigate('/office/travel-accommodation')
+    if (item === 'Booking Driver Requests') navigate('/office/driver-requests')
+    if (item === 'Booking Driver Assign') navigate('/office/assign-drivers')
+    if (item === 'Manage User') navigate('/admin/manage-user')
   }
 
   // Load current user details (used to prevent self-delete in UI).
@@ -537,8 +553,8 @@ function AdminManageUser() {
               <button
                 key={menuItem.label}
                 type="button"
-                className="sidebar-item active"
-                onClick={handleNavigate}
+                className={`sidebar-item ${menuItem.label === 'Manage User' ? 'active' : ''}`}
+                onClick={() => handleNavigate(menuItem.label)}
                 aria-label={menuItem.label}
                 title={menuItem.label}
               >

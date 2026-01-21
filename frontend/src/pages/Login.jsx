@@ -83,12 +83,14 @@ function Login() {
       }
 
       const data = await response.json()
+      localStorage.setItem('authRole', data.role || '')
       const destination = roleRouteMap[data.role] || '/login'
 
       navigate(destination, { replace: true })
     } catch (err) {
       console.error('Login error', err)
       localStorage.removeItem('authToken')
+      localStorage.removeItem('authRole')
       setError(getLoginErrorMessage(err))
     } finally {
       setLoading(false)

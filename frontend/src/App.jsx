@@ -15,6 +15,7 @@ import OfficeTravelAccommodation from './pages/OfficeTravelAccommodation'
 import OfficeAssignDrivers from './pages/OfficeAssignDrivers'
 import OfficeManageUser from './pages/OfficeManageUser'
 import AdminManageUser from './pages/AdminManageUser'
+import AdminHome from './pages/AdminHome'
 import ProtectedRoute from './components/ProtectedRoute'
 import './App.css'
 
@@ -141,7 +142,7 @@ function App() {
             path="/admin/home"
             element={
               <ProtectedRoute>
-                <AdminManageUser />
+                <AdminHome />
               </ProtectedRoute>
             }
           />

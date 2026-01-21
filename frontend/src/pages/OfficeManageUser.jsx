@@ -29,6 +29,7 @@ const initialCreate = {
 function OfficeManageUser() {
   const navigate = useNavigate()
   const { collapsed: isSidebarCollapsed, toggle: toggleSidebar } = useOfficeSidebar()
+  const isSuperadmin = localStorage.getItem('authRole') === 'superadmin'
   const [users, setUsers] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -75,14 +76,17 @@ function OfficeManageUser() {
 
   // Handle sidebar navigation clicks.
   const handleNavigate = (item) => {
-    if (item === 'Dashboard') navigate('/office/home')
+    const dashboardRoute = isSuperadmin ? '/admin/home' : '/office/home'
+    const manageUserRoute = isSuperadmin ? '/admin/manage-user' : '/office/manage-user'
+
+    if (item === 'Dashboard') navigate(dashboardRoute)
     if (item === 'Travel Requests') navigate('/office/ticket-requests')
     if (item === 'Travel Status & History') navigate('/office/ticket-history')
     if (item === 'Booking Driver Status & History') navigate('/office/driver-history')
     if (item === 'Travel Assign') navigate('/office/travel-accommodation')
     if (item === 'Booking Driver Requests') navigate('/office/driver-requests')
     if (item === 'Booking Driver Assign') navigate('/office/assign-drivers')
-    if (item === 'Manage User') navigate('/office/manage-user')
+    if (item === 'Manage User') navigate(manageUserRoute)
   }
 
   // Fetch user profiles from the API.
@@ -478,7 +482,7 @@ function OfficeManageUser() {
       <div className={`office-dashboard fixed-sidebar ${isSidebarCollapsed ? 'is-collapsed' : ''}`}>
         <aside className="office-sidebar visible">
           <div className="sidebar-header">
-            <span className="sidebar-role">Office Coordinator</span>
+            <span className="sidebar-role">{isSuperadmin ? 'Super Admin' : 'Office Coordinator'}</span>
             <button
               type="button"
               className="sidebar-toggle"
