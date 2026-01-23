@@ -49,7 +49,6 @@ function AdminManageUser() {
   const [importLoading, setImportLoading] = useState(false)
   const [importError, setImportError] = useState('')
   const [importResult, setImportResult] = useState(null)
-  const [importUpdateExisting, setImportUpdateExisting] = useState(true)
 
   const [selectedUser, setSelectedUser] = useState(null)
   const [editForm, setEditForm] = useState(null)
@@ -163,7 +162,6 @@ function AdminManageUser() {
     setImportLoading(false)
     setImportError('')
     setImportResult(null)
-    setImportUpdateExisting(true)
   }
 
   // Close the import modal unless an import is in progress.
@@ -250,7 +248,6 @@ function AdminManageUser() {
         body: JSON.stringify({
           filename: importFile.name,
           file_base64: fileBase64,
-          update_existing: importUpdateExisting,
         }),
       })
 
@@ -1009,27 +1006,13 @@ function AdminManageUser() {
                 </div>
 
                 <p className="muted" style={{ marginTop: 0 }}>
-                  Upload an Excel (.xlsx) or CSV (.csv) file to create or update multiple users. Allowed roles: <code>user</code>,{' '}
-                  <code>driver</code>, <code>office_coordinator</code>, <code>superadmin</code> (role is optional; default is{' '}
-                  <code>user</code>).
+                  Upload an Excel (.xlsx) or CSV (.csv) file to create multiple users. Allowed roles: <code>user</code>, <code>driver</code>,{' '}
+                  <code>office_coordinator</code>, <code>superadmin</code> (role is optional; default is <code>user</code>).
                 </p>
 
                 <label className="inline-label">
                   <span>File</span>
                   <input type="file" accept=".xlsx,.csv" onChange={handleImportFileChange} disabled={importLoading} />
-                </label>
-
-                <label className="inline-label">
-                  <span>Options</span>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                    <input
-                      type="checkbox"
-                      checked={importUpdateExisting}
-                      onChange={(event) => setImportUpdateExisting(event.target.checked)}
-                      disabled={importLoading}
-                    />
-                    <span>Update existing accounts (reset password)</span>
-                  </div>
                 </label>
 
                 <p className="muted" style={{ marginTop: 0 }}>
