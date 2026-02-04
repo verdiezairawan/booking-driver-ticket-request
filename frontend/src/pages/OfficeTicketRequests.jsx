@@ -27,6 +27,12 @@ function OfficeTicketRequests() {
   const [actionError, setActionError] = useState('')
   const [processing, setProcessing] = useState({})
   const [page, setPage] = useState(1)
+  const [drivers, setDrivers] = useState([])
+  const [driversLoading, setDriversLoading] = useState(false)
+  const [driversError, setDriversError] = useState('')
+  const [assignModalOpen, setAssignModalOpen] = useState(false)
+  const [assignTarget, setAssignTarget] = useState(null)
+  const [selectedDriverId, setSelectedDriverId] = useState('')
 
   const pageSize = 10
   const totalPages = Math.max(1, Math.ceil(tickets.length / pageSize))
@@ -80,6 +86,46 @@ function OfficeTicketRequests() {
     loadTickets()
   }, [])
 
+  // Load selectable drivers for assignment.
+  useEffect(() => {
+    const token = localStorage.getItem('authToken')
+    if (!token) return
+
+    const loadDrivers = async () => {
+      setDriversLoading(true)
+      setDriversError('')
+
+      try {
+        const res = await fetch(`${API_BASE_URL}/users`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        if (!res.ok) {
+          let detail = 'Failed to load drivers.'
+          try {
+            const data = await res.json()
+            if (data?.detail) detail = data.detail
+          } catch {
+            // ignore parse error
+          }
+          setDriversError(detail)
+          setDrivers([])
+          return
+        }
+
+        const data = await res.json()
+        const allUsers = Array.isArray(data) ? data : []
+        setDrivers(allUsers.filter((user) => user.role === 'driver'))
+      } catch (err) {
+        setDriversError('Network error. Please try again.')
+        setDrivers([])
+      } finally {
+        setDriversLoading(false)
+      }
+    }
+
+    loadDrivers()
+  }, [])
+
   // Update ticket status and remove it from the pending list.
   const handleStatusUpdate = async (ticketId, nextStatus) => {
     const token = localStorage.getItem('authToken')
@@ -122,6 +168,77 @@ function OfficeTicketRequests() {
       setProcessing((prev) => {
         const next = { ...prev }
         delete next[ticketId]
+        return next
+      })
+    }
+  }
+
+  // Open the assign modal for driver selection.
+  const openAssignModal = (ticket) => {
+    setAssignTarget(ticket)
+    setSelectedDriverId('')
+    setAssignModalOpen(true)
+    setActionError('')
+    setActionMessage('')
+  }
+
+  // Close the assign modal.
+  const closeAssignModal = () => {
+    if (processing[assignTarget?.id]) return
+    setAssignModalOpen(false)
+    setAssignTarget(null)
+    setSelectedDriverId('')
+  }
+
+  // Approve the ticket and assign a driver.
+  const handleAssignApprove = async () => {
+    if (!assignTarget?.id) return
+    if (!selectedDriverId) {
+      setActionError('Please select a driver.')
+      return
+    }
+
+    const token = localStorage.getItem('authToken')
+    if (!token) {
+      setActionError('Authentication token not found.')
+      return
+    }
+
+    setProcessing((prev) => ({ ...prev, [assignTarget.id]: true }))
+    setActionMessage('')
+    setActionError('')
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/tickets/${assignTarget.id}/status`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ status: 'approved', driver_id: selectedDriverId }),
+      })
+
+      if (!res.ok) {
+        let detail = 'Failed to approve ticket.'
+        try {
+          const data = await res.json()
+          if (data?.detail) detail = data.detail
+        } catch {
+          // ignore parse error
+        }
+        setActionError(detail)
+        return
+      }
+
+      setTickets((prev) => prev.filter((ticket) => ticket.id !== assignTarget.id))
+      setActionMessage('Ticket approved and driver assigned. Moved to ticket history.')
+      closeAssignModal()
+    } catch (err) {
+      setActionError('Network error. Please try again.')
+    } finally {
+      setProcessing((prev) => {
+        const next = { ...prev }
+        delete next[assignTarget.id]
         return next
       })
     }
@@ -273,7 +390,7 @@ function OfficeTicketRequests() {
                             type="button"
                             className="btn btn-primary"
                             disabled={processing[ticket.id]}
-                            onClick={() => handleStatusUpdate(ticket.id, 'approved')}
+                            onClick={() => openAssignModal(ticket)}
                           >
                             Approve
                           </button>
@@ -314,6 +431,82 @@ function OfficeTicketRequests() {
               Next
             </button>
           </div>
+
+          {assignModalOpen ? (
+            <div
+              className="modal-overlay"
+              role="dialog"
+              aria-modal="true"
+              onClick={() => {
+                if (!processing[assignTarget?.id]) closeAssignModal()
+              }}
+            >
+              <div
+                className="modal"
+                onClick={(event) => {
+                  event.stopPropagation()
+                }}
+              >
+                <div className="modal-header">
+                  <h2>Assign Driver</h2>
+                  <button
+                    type="button"
+                    className="modal-close"
+                    onClick={closeAssignModal}
+                    disabled={processing[assignTarget?.id]}
+                    aria-label="Close"
+                  >
+                    &times;
+                  </button>
+                </div>
+
+                <p className="muted" style={{ marginTop: 0 }}>
+                  Select a driver for this ticket before approving.
+                </p>
+
+                {driversError ? <p className="error-text">{driversError}</p> : null}
+                {actionError ? <p className="error-text">{actionError}</p> : null}
+
+                <label className="inline-label">
+                  <span>Driver</span>
+                  <select
+                    value={selectedDriverId}
+                    onChange={(e) => setSelectedDriverId(e.target.value)}
+                    disabled={driversLoading || processing[assignTarget?.id]}
+                    required
+                  >
+                    <option value="" disabled>
+                      {driversLoading ? 'Loading drivers...' : drivers.length ? 'Select driver...' : 'No drivers available'}
+                    </option>
+                    {drivers.map((driver) => (
+                      <option key={driver.uid} value={driver.uid}>
+                        {driver.name ? `${driver.name} (${driver.email})` : driver.email}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <div className="modal-actions">
+                  <button
+                    type="button"
+                    className="btn btn-primary"
+                    onClick={handleAssignApprove}
+                    disabled={driversLoading || !drivers.length || processing[assignTarget?.id]}
+                  >
+                    Assign & Approve
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-outline-danger"
+                    onClick={closeAssignModal}
+                    disabled={processing[assignTarget?.id]}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : null}
         </section>
       </div>
     </MainLayout>

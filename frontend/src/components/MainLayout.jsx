@@ -150,6 +150,21 @@ function MainLayout({ title, children }) {
     }
   }
 
+  const renderNotificationMessage = (message) => {
+    if (!message) return null
+    const parts = message.split(/(\*\*[^*]+\*\*)/g)
+    return parts.map((part, index) => {
+      if (part.startsWith('**') && part.endsWith('**') && part.length > 4) {
+        return (
+          <strong key={`bold-${index}`}>
+            {part.slice(2, -2)}
+          </strong>
+        )
+      }
+      return <span key={`text-${index}`}>{part}</span>
+    })
+  }
+
   return (
     <div className="layout">
       <header className="navbar">
@@ -194,7 +209,7 @@ function MainLayout({ title, children }) {
                   ) : (
                     notifications.map((item) => (
                       <div key={item.id} className={`notification-item ${item.read ? 'is-read' : 'is-unread'}`}>
-                        <p className="notification-item__message">{item.message}</p>
+                        <p className="notification-item__message">{renderNotificationMessage(item.message)}</p>
                         {item.created_at ? <p className="notification-item__meta">{formatTimestamp(item.created_at)}</p> : null}
                       </div>
                     ))

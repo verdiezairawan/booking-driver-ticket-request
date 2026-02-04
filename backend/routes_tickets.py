@@ -45,6 +45,8 @@ class TicketUserCreate(TicketBase):
 class TicketResponse(TicketCreate):
     id: str
     user_id: Optional[str] = None
+    driver_id: Optional[str] = None
+    driver_name: Optional[str] = None
     status: str = Field(default="pending")
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
@@ -52,6 +54,7 @@ class TicketResponse(TicketCreate):
 
 class TicketStatusUpdate(BaseModel):
     status: Literal["approved", "rejected"]
+    driver_id: Optional[str] = None
 
 
 def serialize_ticket(doc_snapshot) -> TicketResponse:
@@ -60,6 +63,8 @@ def serialize_ticket(doc_snapshot) -> TicketResponse:
     return TicketResponse(
         id=doc_snapshot.id,
         user_id=data.get("user_id"),
+        driver_id=data.get("driver_id"),
+        driver_name=data.get("driver_name"),
         full_name=data.get("full_name"),
         dept_job_position=data.get("dept_job_position"),
         phone_number=data.get("phone_number"),
@@ -212,9 +217,10 @@ def create_ticket(payload: TicketUserCreate, current_user=Depends(get_current_us
         actor_id=uid,
     )
 
+    requester_label = str(full_name).strip() or email or "a user"
     notify_roles(
         ("office_coordinator", "superadmin"),
-        "New travel request submitted. Status is pending and awaiting review.",
+        f"New travel request from **{requester_label}**. Status is pending and awaiting review.",
         event="incoming_request",
         entity_type="ticket",
         entity_id=doc_ref.id,
@@ -284,18 +290,43 @@ def update_ticket_status(ticket_id: str, payload: TicketStatusUpdate, current_us
 
     ticket_data = snapshot.to_dict() or {}
 
-    doc_ref.update(
-        {
-            "status": payload.status,
-            "processed_by": uid,
-            "updated_at": firestore.SERVER_TIMESTAMP,
-        }
-    )
+    driver_name = None
+    if payload.status == "approved":
+        if not payload.driver_id:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="driver_id is required for approval")
+
+        driver_doc = db.collection("users").document(payload.driver_id).get()
+        if not driver_doc.exists:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Driver not found")
+
+        driver_data = driver_doc.to_dict() or {}
+        if driver_data.get("role") != "driver":
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Selected user is not a driver")
+
+        driver_name = driver_data.get("name") or driver_data.get("email") or payload.driver_id
+
+    updates = {
+        "status": payload.status,
+        "processed_by": uid,
+        "updated_at": firestore.SERVER_TIMESTAMP,
+    }
+
+    if payload.status == "approved":
+        updates["driver_id"] = payload.driver_id
+        updates["driver_name"] = driver_name
+    else:
+        updates["driver_id"] = None
+        updates["driver_name"] = None
+
+    doc_ref.update(updates)
 
     user_id = ticket_data.get("user_id")
     if user_id:
         if payload.status == "approved":
-            message = "Your travel request has been approved."
+            if driver_name:
+                message = f"Your travel request has been approved. Driver assigned: **{driver_name}**."
+            else:
+                message = "Your travel request has been approved. A driver has been assigned."
         else:
             message = "Your travel request has been rejected."
 
@@ -306,6 +337,18 @@ def update_ticket_status(ticket_id: str, payload: TicketStatusUpdate, current_us
             entity_type="ticket",
             entity_id=ticket_id,
             status=payload.status,
+            actor_id=uid,
+        )
+
+    if payload.status == "approved" and payload.driver_id:
+        requester_label = ticket_data.get("full_name") or ticket_data.get("email") or "a user"
+        create_user_notification(
+            payload.driver_id,
+            f"You have been assigned to travel request for **{requester_label}**.",
+            event="assigned",
+            entity_type="ticket",
+            entity_id=ticket_id,
+            status="approved",
             actor_id=uid,
         )
 

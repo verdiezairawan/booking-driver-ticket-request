@@ -39,6 +39,7 @@ class BookingResponse(BaseModel):
     id: str
     user_id: Optional[str] = None
     driver_id: Optional[str] = None
+    driver_name: Optional[str] = None
     requester_name: Optional[str] = None
     requester_dept_job_position: Optional[str] = None
     requester_nik: Optional[str] = None
@@ -84,6 +85,7 @@ def serialize_booking(doc_snapshot) -> BookingResponse:
         id=doc_snapshot.id,
         user_id=data.get("user_id"),
         driver_id=data.get("driver_id"),
+        driver_name=data.get("driver_name"),
         requester_name=data.get("requester_name"),
         requester_dept_job_position=data.get("requester_dept_job_position"),
         requester_nik=data.get("requester_nik"),
@@ -114,6 +116,17 @@ def ensure_role(uid: str, allowed: tuple[str, ...]):
     if role not in allowed:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
     return role
+
+
+def resolve_driver_name(driver_id: Optional[str]) -> Optional[str]:
+    """Resolve a driver display name from the user profile."""
+    if not driver_id:
+        return None
+    doc = db.collection("users").document(driver_id).get()
+    if not doc.exists:
+        return None
+    data = doc.to_dict() or {}
+    return data.get("name") or data.get("email")
 
 
 def get_departure_time_epoch_ms(value: Optional[datetime]) -> Optional[int]:
@@ -204,9 +217,10 @@ def create_booking(payload: BookingCreate, current_user=Depends(get_current_user
         actor_id=uid,
     )
 
+    requester_label = requester_name or current_user.get("email") or "a user"
     notify_roles(
         ("office_coordinator", "superadmin"),
-        "New driver booking request submitted. Status is pending and awaiting review.",
+        f"New driver booking request from **{requester_label}**. Status is pending and awaiting review.",
         event="incoming_request",
         entity_type="booking",
         entity_id=doc_ref.id,
@@ -277,9 +291,12 @@ def assign_driver(payload: BookingAssignCreate, current_user=Depends(get_current
     booking = serialize_booking(snapshot)
 
     if linked_user_id:
+        user_message = "A driver booking has been created for you and has been approved."
+        if driver_name:
+            user_message = f"A driver booking has been created for you and has been approved. Driver assigned: **{driver_name}**."
         create_user_notification(
             linked_user_id,
-            "A driver booking has been created for you and has been approved.",
+            user_message,
             event="created_by_office",
             entity_type="booking",
             entity_id=doc_ref.id,
@@ -287,9 +304,10 @@ def assign_driver(payload: BookingAssignCreate, current_user=Depends(get_current
             actor_id=uid,
         )
 
+    requester_label = payload.requester_name or payload.requester_email or "a passenger"
     create_user_notification(
         driver_uid,
-        "You have been assigned a new driver task. Please check Driver Tasks for details.",
+        f"You have been assigned to pick up **{requester_label}**. Please check Driver Tasks for details.",
         event="assigned",
         entity_type="booking",
         entity_id=doc_ref.id,
@@ -317,7 +335,13 @@ def list_my_bookings(current_user=Depends(get_current_user)):
         return datetime.min
 
     sorted_docs = sorted(snapshots, key=created_at_value, reverse=True)
-    return [serialize_booking(doc) for doc in sorted_docs]
+    results: list[BookingResponse] = []
+    for doc in sorted_docs:
+        booking = serialize_booking(doc)
+        if booking.driver_id and not booking.driver_name:
+            booking.driver_name = resolve_driver_name(booking.driver_id)
+        results.append(booking)
+    return results
 
 
 @router.get("/pending", response_model=list[BookingResponse])
@@ -399,19 +423,28 @@ def update_booking_status(
                 detail="Driver is not available at this departure time",
             )
 
+    driver_name = None
+    if payload.status == "approved" and payload.driver_id:
+        driver_name = resolve_driver_name(payload.driver_id)
+
     updates = {
         "status": payload.status,
         "updated_at": firestore.SERVER_TIMESTAMP,
     }
     if payload.driver_id is not None:
         updates["driver_id"] = payload.driver_id
+        if payload.status == "approved" and driver_name:
+            updates["driver_name"] = driver_name
 
     doc_ref.update(updates)
 
     user_id = booking_data.get("user_id")
     if user_id:
         if payload.status == "approved":
-            message = "Your driver booking request has been approved."
+            if driver_name:
+                message = f"Your driver booking request has been approved. Driver assigned: **{driver_name}**."
+            else:
+                message = "Your driver booking request has been approved."
         elif payload.status == "rejected":
             message = "Your driver booking request has been rejected."
         else:
@@ -428,9 +461,10 @@ def update_booking_status(
         )
 
     if payload.status == "approved" and payload.driver_id:
+        requester_label = booking_data.get("requester_name") or booking_data.get("requester_email") or "a passenger"
         create_user_notification(
             payload.driver_id,
-            "You have been assigned a new driver task. Please check Driver Tasks for details.",
+            f"You have been assigned to pick up **{requester_label}**. Please check Driver Tasks for details.",
             event="assigned",
             entity_type="booking",
             entity_id=booking_id,

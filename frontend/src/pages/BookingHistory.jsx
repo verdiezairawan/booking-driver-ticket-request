@@ -56,6 +56,8 @@ function BookingHistory() {
         return booking.requester_phone || ''
       case 'requester_email':
         return booking.requester_email || ''
+      case 'driver':
+        return booking.driver_name || ''
       case 'pickup_location':
         return booking.pickup_location || ''
       case 'destination':
@@ -327,6 +329,11 @@ function BookingHistory() {
                       </button>
                     </th>
                     <th>
+                      <button type="button" className="table-sort" onClick={() => toggleSort('driver')}>
+                        Driver {renderSortIcon('driver')}
+                      </button>
+                    </th>
+                    <th>
                       <button type="button" className="table-sort" onClick={() => toggleSort('pickup_location')}>
                         Pickup Location {renderSortIcon('pickup_location')}
                       </button>
@@ -362,7 +369,7 @@ function BookingHistory() {
                 <tbody>
                   {bookings.length === 0 ? (
                     <tr>
-                      <td colSpan="14" className="muted">
+                      <td colSpan="15" className="muted">
                         No driver bookings yet.
                       </td>
                     </tr>
@@ -380,6 +387,7 @@ function BookingHistory() {
                           <td className="cell-wrap">{booking.requester_dept_job_position || '-'}</td>
                           <td>{booking.requester_phone || '-'}</td>
                           <td className="cell-wrap">{booking.requester_email || '-'}</td>
+                          <td className="cell-wrap">{booking.driver_name || '-'}</td>
                           <td className="cell-wrap">{booking.pickup_location || '-'}</td>
                           <td className="cell-wrap">{booking.destination || '-'}</td>
                           <td>{booking.passenger_count ?? '-'}</td>
